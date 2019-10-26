@@ -5,7 +5,7 @@ branches:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6-stretch-browsers-legacy
+      - image: circleci/python:3.6.1
     working_directory: ~/eddi
     steps:
       - checkout
