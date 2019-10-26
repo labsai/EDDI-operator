@@ -11,7 +11,7 @@ jobs:
       - checkout
       - setup_remote_docker
 
-      - run: pip install docker molecule openshift
+      - run: sudo pip install docker molecule openshift
 
       - run:
           name: Testing
