@@ -1,0 +1,41 @@
+version: 2
+branches:
+  ignore:
+    - gh-pages
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6-stretch-browsers-legacy
+    working_directory: ~/eddi
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run: pip install docker molecule openshift
+
+      - run:
+          name: Testing
+          command: molecule test -s test-local
+
+      - deploy:
+          name: Build and push Docker image
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+            docker build -f build/Dockerfile labsai/eddi-operator:1.0.0-b$CIRCLE_BUILD_NUM .
+            docker push labsai/eddi-operator:1.0.0-b$CIRCLE_BUILD_NUM
+
+            docker build -f build/Dockerfile labsai/eddi-operator:latest .
+            docker push labsai/eddi-operator:latest
+
+            # docker build -f build/Dockerfile labsai/eddi-operator:1.0.0 .
+            # docker push labsai/eddi-operator:1.0.0
+
+            # docker build -f build/Dockerfile labsai/eddi-operator:1.0 .
+            # docker push labsai/eddi-operator:1.0
+
+            # docker build -f build/Dockerfile labsai/eddi-operator:1 .
+            # docker push labsai/eddi-operator:1
+
+            fi
