@@ -7,7 +7,7 @@ LABEL name="EDDI Operator" \
       summary="This opeator is to deploy EDDI Chatbot on you cluster" \
       description="This operator will deploy EDDI Chatbot to the cluster."
 
-COPY LICENSE ${HOME}
+COPY licenses /licenses
 
 COPY watches.yaml ${HOME}/watches.yaml
 
