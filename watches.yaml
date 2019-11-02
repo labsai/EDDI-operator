@@ -2,4 +2,4 @@
 - version: v1alpha1
   group: labs.ai
   kind: Eddioperator
-  role: /opt/ansible/roles/eddioperator
+  playbook: /opt/ansible/playbook.yaml
