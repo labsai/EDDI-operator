@@ -12,21 +12,21 @@
         replicas: "{{ size }}"
         selector:
           matchLabels:
-            app: eddi-chatbot
+            app: eddi
         template:
           metadata:
             labels:
-              app: eddi-chatbot
+              app: eddi
           spec:
             containers:
-            - name: eddi-chatbot
+            - name: eddi
               image: "{{ image.repository }}/{{ image.image_name }}:{{ image.tag }}"
               ports:
               - containerPort: 7070
               - containerPort: 7443 
               env:
               - name: "EDDI_VERSION"
-                value: 4.8
+                value: 4.7
               - name: "EDDI_ENV"
                 value: "production"
               - name: "EDDI_MEMORY_MIN"
@@ -41,8 +41,8 @@
       apiVersion: v1
       metadata:
         labels:
-          app: eddi-chatbot
-        name: '{{ meta.name }}-eddi-chatbot'
+          app: eddi
+        name: '{{ meta.name }}-eddi'
         namespace: '{{ meta.namespace }}'
       spec:
         ports:
@@ -55,6 +55,6 @@
           protocol: TCP
           targetPort: 7443        
         selector:
-          app: eddi-chatbot
+          app: eddi
         sessionAffinity: None
         type: ClusterIP
