@@ -5,3 +5,7 @@ metadata:
 spec:
   # Add fields here
   size: 1
+  image:
+    repository: labsai
+    image_name: eddi
+    tag: latest
