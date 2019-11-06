@@ -32,7 +32,17 @@
               - name: "EDDI_MEMORY_MIN"
                 value: "1G"
               - name: "EDDI_MEMORY_MAX"
-                value: "1G"            
+                value: "1G" 
+                resources:
+                  limits:
+                    cpu: 512m
+                    memory: 512Mi
+                  requests:
+                    cpu: 10m
+                    memory: 10Mi
+            serviceAccount: default
+            serviceAccountName: default
+            terminationGracePeriodSeconds: 30
 
 - name: create operand service
   k8s:
