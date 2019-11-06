@@ -21,6 +21,14 @@
             containers:
             - name: eddi
               image: "{{ image.repository }}/{{ image.image_name }}:{{ image.tag }}"
+              livenessProbe:
+                failureThreshold: 3
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                successThreshold: 1
+                tcpSocket:
+                  port: 7070
+                timeoutSeconds: 1   
               ports:
               - containerPort: 7070
               - containerPort: 7443 
