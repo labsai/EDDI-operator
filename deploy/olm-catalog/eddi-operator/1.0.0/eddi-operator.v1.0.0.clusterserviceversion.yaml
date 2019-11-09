@@ -1,0 +1,208 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "labs.ai/v1alpha1",
+          "kind": "Eddioperator",
+          "metadata": {
+            "name": "eddioperator"
+          },
+          "spec": {
+            "image": {
+              "image_name": "eddi",
+              "repository": "labsai",
+              "tag": "latest"
+            },
+            "size": 1
+          }
+        }
+      ]
+    categories: 'AI/Machine Learning, Developer Tools'
+    certified: 'false'
+    createdAt: 2019-11-9T12:59:59Z
+    description: 'Basic Installation of EDDI, upgrade to new versions'
+    containerImage: 'labsai:eddi:latest'
+    support: 'Eddi'
+    capabilities: Seamless Upgrades
+    repository: 'https://github.com/labsai/EDDI-operator/'
+    capabilities: Basic Install
+  name: eddi-operator.v1.0.0
+  namespace: placeholder
+spec:
+  provider:
+    - name: LABS.AI
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - name: eddi.labs.ai
+      displayName: EDDI
+      description: Eddi operator description
+      kind: Eddioperator
+      name: eddioperators.labs.ai
+      version: v1alpha1
+  displayName: EDDI Operator
+  description: >
+    ## About the managed application
+    **Enterprise-Ready Open Source Chatbot Platform**
+    create, run and maintain customizable chatbots
+    **Scale Horizontally**
+    scale out horizontally due to resource-oriented design & RESTful
+    architecture
+    **NLP Parser**
+    match user inputs as words and phrases even in case of spelling mistakes or
+    missing spaces between words
+    **Behavior Rules**
+    make decisions with predefined and custom conditions
+    **Conversation Memory**
+    store context information between user interactions in order to make better
+    conversation decisions
+    **Extension Oriented**
+    build loosely coupled plugins that allows the integration of new algorithms
+    and communication to other systems
+    **Modular Bot Configurations**
+    share bot knowledge across bots in order to reuse components and thus speed
+    up further developments
+    **Versioned Configurations**
+    track changes of all of your configurations. Use different versions of your
+    configurations in different bots, to allow multiple bots with shared
+    knowledge
+    **Developed as Microservices, Restful by Design**
+    we don't need to comment on that, do we...? ;-) 
+    ## About this Operator
+    Launch and update EDDI instances
+    ## Prerequisites for enabling this Operator
+    You need to first launch mongodb before you should launch EDDI, preferably
+    with the mongodb operator
+  icon:
+    - base64date: 
+      mediatype: image/png
+  install:
+    spec:
+      deployments:
+      - name: eddi-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: eddi-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: eddi-operator
+            spec:
+              containers:
+              - command:
+                - /usr/local/bin/ao-logs
+                - /tmp/ansible-operator/runner
+                - stdout
+                image: '{{ REPLACE_IMAGE }}'
+                imagePullPolicy: '{{ pull_policy|default(''Always'') }}'
+                name: ansible
+                resources: {}
+                volumeMounts:
+                - mountPath: /tmp/ansible-operator/runner
+                  name: runner
+                  readOnly: true
+              - env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: eddi-operator
+                image: '{{ REPLACE_IMAGE }}'
+                imagePullPolicy: '{{ pull_policy|default(''Always'') }}'
+                name: operator
+                resources: {}
+                volumeMounts:
+                - mountPath: /tmp/ansible-operator/runner
+                  name: runner
+              serviceAccountName: eddi-operator
+              volumes:
+              - emptyDir: {}
+                name: runner
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - eddi-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - labs.ai
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: eddi-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  maturity: alpha
+  keywords:
+    - chatbot
+    - conversational ui
+    - virtual assistant
+    - state machine
+    - nlp
+  maintainers:
+    - name: LABS.AI
+      email: contact@labs.ai
+  labels: {}
+  selector:
+    matchLabels: {}
+  links:
+    - name: Project Home
+      url: 'https://eddi.labs.ai'
+    - name: Professional Support
+      url: 'https://www.labs.ai'
+    - name: Documentation
+      url: 'http://docs.labs.ai'
+  replaces: eddi-operator.v0.0.0
+  version: 1.0.0
