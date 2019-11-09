@@ -9,7 +9,12 @@
         name: "{{ meta.name }}"
         namespace: "{{ meta.namespace }}"
       spec:
+        strategy:
+          type: Recreate
+          recreateParams:
+            timeoutSeconds: 600 
         replicas: "{{ size }}"
+        test: false
         selector:
           matchLabels:
             app: eddi
