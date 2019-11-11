@@ -37,7 +37,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - name: eddi.labs.ai
+    - name: eddioperators.labs.ai
       displayName: EDDI
       description: Eddi operator description
       kind: Eddioperator
