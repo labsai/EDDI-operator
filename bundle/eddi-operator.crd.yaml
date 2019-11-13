@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: eddioperators.labs.ai
+  name: eddioperator.labs.ai
 spec:
   group: labs.ai
   names:
