@@ -3,11 +3,11 @@ kind: CustomResourceDefinition
 metadata:
   name: eddioperator.labs.ai
 spec:
-  group: labs.ai
+  group: eddioperator.labs.ai
   names:
     kind: Eddioperator
     listKind: EddioperatorList
-    plural: eddioperators
+    plural: eddioperator.labs.ai
     singular: eddioperator
   scope: Namespaced
   subresources:
