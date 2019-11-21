@@ -1,0 +1,7 @@
+---
+# defaults file for eddioperator
+size: 1
+image:
+  repository: labsai
+  image_name: eddi
+  tag: latest
