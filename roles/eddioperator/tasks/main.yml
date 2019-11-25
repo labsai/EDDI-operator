@@ -39,7 +39,7 @@
               - containerPort: 7443 
               env:
               - name: "EDDI_VERSION"
-                value: 4.7
+                value: "4.7"
               - name: "EDDI_ENV"
                 value: "production"
               - name: "EDDI_MEMORY_MIN"
