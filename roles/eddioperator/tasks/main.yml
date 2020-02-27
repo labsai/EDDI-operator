@@ -39,13 +39,13 @@
               - containerPort: 7443 
               env:
               - name: "EDDI_VERSION"
-                value: "4.7"
+                value: "4.8"
               - name: "EDDI_ENV"
                 value: "production"
-              - name: "EDDI_MEMORY_MIN"
-                value: "1G"
-              - name: "EDDI_MEMORY_MAX"
-                value: "1G" 
+              - name: "EDDI_MEMORY_PERCENTAGE_MIN"
+                value: "50"
+              - name: "EDDI_MEMORY_PERCENTAGE_MAX"
+                value: "80"
                 resources:
                   limits:
                     cpu: 512m
