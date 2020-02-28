@@ -11,11 +11,6 @@ metadata:
             "name": "eddioperator"
           },
           "spec": {
-            "image": {
-              "image_name": "eddi",
-              "repository": "labsai",
-              "tag": "latest"
-            },
             "size": 1
           }
         }
