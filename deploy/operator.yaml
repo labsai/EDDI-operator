@@ -20,7 +20,7 @@ spec:
           - /tmp/ansible-operator/runner
           - stdout
           # Replace this with the built image name
-          image: registry.access.redhat.com/labsai/eddi-operator:latest
+          image: registry.connect.redhat.com/labsai/eddi-operator:latest
           imagePullPolicy: Always
           volumeMounts:
           - mountPath: /tmp/ansible-operator/runner
@@ -28,7 +28,7 @@ spec:
             readOnly: true
         - name: operator
           # Replace this with the built image name
-          image: registry.access.redhat.com/labsai/eddi-operator:latest
+          image: registry.connect.redhat.com/labsai/eddi-operator:latest
           imagePullPolicy: Always
           volumeMounts:
           - mountPath: /tmp/ansible-operator/runner
@@ -45,7 +45,7 @@ spec:
             - name: OPERATOR_NAME
               value: "eddi-operator"
             - name: RELATED_IMAGE_DB
-              value: "registry.access.redhat.com/labsai/eddi:latest"
+              value: "registry.connect.redhat.com/labsai/eddi:latest"
       volumes:
         - name: runner
           emptyDir: {}
