@@ -27,11 +27,11 @@ metadata:
   namespace: placeholder
 spec:
   provider:
-    name: LABS.AI
+    - name: LABS.AI
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - name: eddioperators.eddioperator.labs.ai
+    - name: eddioperators.labs.ai
       displayName: EDDI
       description: Eddi operator description
       kind: Eddioperator
@@ -92,7 +92,7 @@ spec:
                 - /usr/local/bin/ao-logs
                 - /tmp/ansible-operator/runner
                 - stdout
-                image: registry.connect.redhat.com/labsai/eddi-operator:latest
+                image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
                 imagePullPolicy: Always
                 name: ansible
                 resources: {}
@@ -111,9 +111,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: eddi-operator
-                - name: RELATED_IMAGE_EDDI_DEPLOYMENT
-                  value: registry.connect.redhat.com/labsai/eddi:latest
-                image: registry.connect.redhat.com/labsai/eddi-operator:latest
+                image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
