@@ -93,7 +93,7 @@ spec:
                 - /tmp/ansible-operator/runner
                 - stdout
                 image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
-                imagePullPolicy: '{{ pull_policy|default(''Always'') }}'
+                imagePullPolicy: Always
                 name: ansible
                 resources: {}
                 volumeMounts:
@@ -112,7 +112,7 @@ spec:
                 - name: OPERATOR_NAME
                   value: eddi-operator
                 image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
-                imagePullPolicy: '{{ pull_policy|default(''Always'') }}'
+                imagePullPolicy: Always
                 name: operator
                 resources: {}
                 volumeMounts:
