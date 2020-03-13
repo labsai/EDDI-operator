@@ -92,7 +92,7 @@ spec:
                 - /usr/local/bin/ao-logs
                 - /tmp/ansible-operator/runner
                 - stdout
-                image: registry.connect.redhat.com/labsai/eddi-operator:latest
+                image: registry.connect.redhat.com/labsai/eddi-operator:0.0.8
                 imagePullPolicy: Always
                 name: ansible
                 resources: {}
@@ -113,7 +113,7 @@ spec:
                   value: eddi-operator
                 - name: RELATED_IMAGE_EDDI_DEPLOYMENT
                   value: registry.connect.redhat.com/labsai/eddi:latest
-                image: registry.connect.redhat.com/labsai/eddi-operator:latest
+                image: registry.connect.redhat.com/labsai/eddi-operator:0.0.8
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
