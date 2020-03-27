@@ -8,6 +8,10 @@
       metadata:
         name: "{{ meta.name }}"
         namespace: "{{ meta.namespace }}"
+        annotations:
+          prometheus.io/path: /metrics
+          prometheus.io/port: "8080"
+          prometheus.io/scrape: "true"
       spec:
         strategy:
           type: Recreate
@@ -67,6 +71,10 @@
           app: eddi
         name: '{{ meta.name }}-eddi'
         namespace: '{{ meta.namespace }}'
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/scheme: http
+          prometheus.io/port: "8080"
       spec:
         ports:
         - name: 7070-port
