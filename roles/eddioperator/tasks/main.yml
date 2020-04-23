@@ -1,83 +1,13 @@
----
-# tasks file for eddioperator
-- name: create operand deployment
-  k8s:
-    definition:
-      kind: Deployment
-      apiVersion: apps/v1
-      metadata:
-        name: "{{ meta.name }}"
-        namespace: "{{ meta.namespace }}"
-      spec:
-        strategy:
-          type: Recreate
-          recreateParams:
-            timeoutSeconds: 600 
-        replicas: "{{ size }}"
-        test: false
-        selector:
-          matchLabels:
-            app: eddi
-        template:
-          metadata:
-            labels:
-              app: eddi
-          spec:
-            containers:
-            - name: eddi
-              image: "{{ image.repository }}/{{ image.image_name }}:{{ image.tag }}"
-              livenessProbe:
-                failureThreshold: 3
-                initialDelaySeconds: 30
-                periodSeconds: 10
-                successThreshold: 1
-                tcpSocket:
-                  port: 7070
-                timeoutSeconds: 1   
-              ports:
-              - containerPort: 7070
-              - containerPort: 7443 
-              env:
-              - name: "EDDI_VERSION"
-                value: "4.8"
-              - name: "EDDI_ENV"
-                value: "production"
-              - name: "EDDI_MEMORY_PERCENTAGE_MIN"
-                value: "50"
-              - name: "EDDI_MEMORY_PERCENTAGE_MAX"
-                value: "80"
-                resources:
-                  limits:
-                    cpu: 512m
-                    memory: 512Mi
-                  requests:
-                    cpu: 10m
-                    memory: 10Mi
-            serviceAccount: default
-            serviceAccountName: default
-            terminationGracePeriodSeconds: 30
+- block:
 
-- name: create operand service
-  k8s:
-    definition:
-      kind: Service
-      apiVersion: v1
-      metadata:
-        labels:
-          app: eddi
-        name: '{{ meta.name }}-eddi'
-        namespace: '{{ meta.namespace }}'
-      spec:
-        ports:
-        - name: 7070-port
-          port: 7070
-          protocol: TCP
-          targetPort: 7070
-        - name: 7443-port
-          port: 7443
-          protocol: TCP
-          targetPort: 7443        
-        selector:
-          app: eddi
-        sessionAffinity: None
-        type: ClusterIP
+  - name: Initial setup DB
+    when: no_mongo_setup_enable |bool
+    include: 01-mongo_db-deployment.yml
+    tags:
+    - db
+    - eddi
+
+  - name:  setup eddi 
+    include: 02-eddi-deployment.yml
+    tags:
+    - eddi

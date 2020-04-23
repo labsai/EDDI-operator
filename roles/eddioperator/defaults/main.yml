@@ -5,3 +5,26 @@ image:
   repository: labsai
   image_name: eddi
   tag: latest
+
+  mongodb:
+    image_name: mongo
+    tag: 4.2
+
+meta:
+  namespace: eddi-test
+  name: eddit
+
+  environment: develop
+
+  replica: 1
+
+  storage:
+    class_name: gp2
+    size: 20G
+
+# Default when condition is false
+# playbook will overwrite this variable
+no_mongo_setup_enable: false
+
+#  namespace: default
+#  name: eddi
