@@ -1,0 +1,81 @@
+- name: 01-deploy mongo-db service
+  k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        name: "{{ meta.name }}-db-svc"
+        namespace: "{{ meta.namespace }}"
+        labels:
+          tier: db
+      spec:
+        ports:
+        - name: mongodb
+          port: 27017
+          targetPort: 27017
+        clusterIP: None
+        selector:
+          app: eddi
+          tier: db
+
+- name: 01-deploy mongo-db
+  k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1beta1
+      metadata:
+        name: "{{ meta.name }}-db"
+        namespace: "{{ meta.namespace }}"
+        labels:
+          environment: "{{ meta.environment }}"
+          tier: db
+      spec:
+        serviceName: "{{ meta.name }}-db-svc"
+        replicas: 1
+        template:
+          metadata:
+            labels:
+              tier: db
+              environment: "{{ meta.environment }}"
+          spec:
+            containers:
+              - name: mongo
+                image: "{{ image.mongodb.image_name }}:{{ image.mongodb.tag }}"
+                imagePullPolicy: IfNotPresent
+                ports:
+                  - containerPort: 27017
+                livenessProbe:
+                  exec:
+                    command:
+                    - mongo
+                    - --eval
+                    - "db.adminCommand('ping')"
+                  initialDelaySeconds: 30
+                  timeoutSeconds: 5
+                volumeMounts:
+                  - name: db-storage
+                    mountPath: /data/db
+        volumeClaimTemplates:
+        - metadata:
+            name: db-storage
+            annotations:
+              volume.beta.kubernetes.io/storage-class: "{{ meta.storage.class_name }}" 
+          spec:
+            accessModes: [ "ReadWriteOnce" ]
+            resources:
+              requests:
+                storage: "{{ meta.storage.size }}"
+
+- name: 01-Wait for MangoDB server pod to come up
+  k8s_info:
+    kind: Pod
+    namespace: '{{ meta.namespace }}'
+    label_selectors:
+      - tier = db
+    field_selectors:
+      - status.phase=Running
+  register: pod_mongodb
+  until: pod_mongodb | json_query('resources[*].status.phase')|unique == ["Running"]
+  delay: 10
+  retries: 5
+
