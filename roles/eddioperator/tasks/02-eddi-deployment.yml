@@ -71,16 +71,10 @@
                 value: "80"
               - name: GET_HOSTS_FROM
                 value: dns
-              - name: GCLOUD_PROJECT
-                value: 'differ-140008'
               - name: EDDI_JAVA_ENV_MONGODB_HOST
                 value: mongodb.hosts={{ meta.name }}-db-svc
-              - name: EDDI_JAVA_ENV_AMQP_HOST
-                value: 'amqp.host=messagequeue'
-              - name: EDDI_JAVA_ENV_BUGSNAG_API_KEY
-                value: 'bugsnagApiKey=2ef8053c6e23170dd84614e7c26e5d27'
               - name: EDDI_JVM_OPTIONS
-                value: '-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom.bin -XX:+UseContainerSupport'
+                value: '-XX:+UseContainerSupport' #for debugging: -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom.bin
               - name: EDDI_JAVA_ENV_TUNE_BUFFER
                 value: 'jdk.nio.MaxCachedBufferSize=1048576'
                 resources:

@@ -92,7 +92,7 @@ spec:
                 - /usr/local/bin/ao-logs
                 - /tmp/ansible-operator/runner
                 - stdout
-                image: registry.connect.redhat.com/labsai/eddi-operator:0.0.8
+                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.0
                 imagePullPolicy: Always
                 name: ansible
                 resources: {}
@@ -113,7 +113,7 @@ spec:
                   value: eddi-operator
                 - name: RELATED_IMAGE_EDDI_DEPLOYMENT
                   value: registry.connect.redhat.com/labsai/eddi:latest
-                image: registry.connect.redhat.com/labsai/eddi-operator:0.0.8
+                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.0
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
@@ -198,6 +198,6 @@ spec:
     - name: Professional Support
       url: 'https://www.labs.ai'
     - name: Documentation
-      url: 'http://docs.labs.ai'
+      url: 'https://docs.labs.ai'
   # replaces: eddi-operator.v0.0.0
   version: 1.0.0

@@ -196,6 +196,6 @@ spec:
     - name: Professional Support
       url: 'https://www.labs.ai'
     - name: Documentation
-      url: 'http://docs.labs.ai'
+      url: 'https://docs.labs.ai'
   # replaces: eddi-operator.v0.0.0
   version: 1.0.0
