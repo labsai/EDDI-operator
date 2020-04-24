@@ -1,0 +1,128 @@
+- name: 02-create operand service
+  k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        labels:
+          app: eddi
+        name: '{{ meta.name }}-eddi'
+        namespace: '{{ meta.namespace }}'
+      spec:
+        ports:
+        - name: 7070-port
+          port: 7070
+          protocol: TCP
+          targetPort: 7070
+        - name: 7443-port
+          port: 7443
+          protocol: TCP
+          targetPort: 7443        
+        selector:
+          app: eddi
+        sessionAffinity: None
+        type: ClusterIP
+
+- name: 02-create operand deployment
+  k8s:
+    definition:
+      kind: Deployment
+      apiVersion: apps/v1
+      metadata:
+        name: "{{ meta.name }}"
+        namespace: "{{ meta.namespace }}"
+      spec:
+        strategy:
+          type: Recreate
+          recreateParams:
+            timeoutSeconds: 600 
+        replicas: "{{ size }}"
+        test: false
+        selector:
+          matchLabels:
+            app: eddi
+        template:
+          metadata:
+            labels:
+              app: eddi
+          spec:
+            containers:
+            - name: eddi
+              image: "{{ image.repository }}/{{ image.image_name }}:{{ image.tag }}"
+              livenessProbe:
+                failureThreshold: 3
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                successThreshold: 1
+                tcpSocket:
+                  port: 7070
+                timeoutSeconds: 1   
+              ports:
+              - containerPort: 7070
+              - containerPort: 7443 
+              env:
+              - name: "EDDI_VERSION"
+                value: "4.8"
+              - name: "EDDI_ENV"
+                value: "production"
+              - name: "EDDI_MEMORY_PERCENTAGE_MIN"
+                value: "50"
+              - name: "EDDI_MEMORY_PERCENTAGE_MAX"
+                value: "80"
+              - name: GET_HOSTS_FROM
+                value: dns
+              - name: GCLOUD_PROJECT
+                value: 'differ-140008'
+              - name: EDDI_JAVA_ENV_MONGODB_HOST
+                value: mongodb.hosts={{ meta.name }}-db-svc
+              - name: EDDI_JAVA_ENV_AMQP_HOST
+                value: 'amqp.host=messagequeue'
+              - name: EDDI_JAVA_ENV_BUGSNAG_API_KEY
+                value: 'bugsnagApiKey=2ef8053c6e23170dd84614e7c26e5d27'
+              - name: EDDI_JVM_OPTIONS
+                value: '-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom.bin -XX:+UseContainerSupport'
+              - name: EDDI_JAVA_ENV_TUNE_BUFFER
+                value: 'jdk.nio.MaxCachedBufferSize=1048576'
+                resources:
+                  limits:
+                    cpu: 512m
+                    memory: 512Mi
+                  requests:
+                    cpu: 10m
+                    memory: 10Mi
+            serviceAccount: default
+            serviceAccountName: default
+            terminationGracePeriodSeconds: 30
+
+- name: 02-Wait for eddi server pod to come up
+  k8s_info:
+    kind: Pod
+    namespace: '{{ meta.namespace }}'
+    label_selectors:
+      - app = eddi
+    field_selectors:
+      - status.phase=Running
+  register: pod_eddi_server
+  until: pod_eddi_server | json_query('resources[*].status.phase')|unique == ["Running"]
+  delay: 10
+  retries: 5
+
+
+- name: 02-Expose eddi server route
+  k8s:
+    state: present
+    definition:
+      kind: Route
+      apiVersion: v1
+      metadata:
+        namespace: '{{ meta.namespace }}'
+        labels:
+          app: eddi
+        name: "{{ meta.name }}-route"
+      spec:
+        to:
+          kind: Service
+          name: '{{ meta.name }}-eddi'
+        port:
+          targetPort: 7070-port
+
