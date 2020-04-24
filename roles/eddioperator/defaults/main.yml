@@ -14,7 +14,7 @@ meta:
   namespace: eddi-test
   name: eddit
 
-  environment: develop
+  environment: production
 
   replica: 1
 

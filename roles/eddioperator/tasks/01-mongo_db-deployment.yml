@@ -7,6 +7,8 @@
         name: "{{ meta.name }}-db-svc"
         namespace: "{{ meta.namespace }}"
         labels:
+          app: eddi
+          environment: "{{ meta.environment }}"
           tier: db
       spec:
         ports:
@@ -15,7 +17,6 @@
           targetPort: 27017
         clusterIP: None
         selector:
-          app: eddi
           tier: db
 
 - name: 01-deploy mongo-db
@@ -27,6 +28,7 @@
         name: "{{ meta.name }}-db"
         namespace: "{{ meta.namespace }}"
         labels:
+          app: eddi
           environment: "{{ meta.environment }}"
           tier: db
       spec:
@@ -35,6 +37,7 @@
         template:
           metadata:
             labels:
+              app: eddi
               tier: db
               environment: "{{ meta.environment }}"
           spec:
