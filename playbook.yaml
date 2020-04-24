@@ -1,3 +1,5 @@
 - hosts: localhost  
   roles:    
     - eddioperator
+  vars:
+    no_mongo_setup_enable: true
