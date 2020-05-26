@@ -8,7 +8,7 @@
         namespace: "{{ meta.namespace }}"
         labels:
           app: eddi
-          environment: "{{ meta.environment }}"
+          environment: "{{ mongodb.environment }}"
           tier: db
       spec:
         ports:
@@ -23,27 +23,32 @@
   k8s:
     definition:
       kind: StatefulSet
-      apiVersion: apps/v1beta1
+      apiVersion: apps/v1
       metadata:
         name: "{{ meta.name }}-db"
         namespace: "{{ meta.namespace }}"
         labels:
           app: eddi
-          environment: "{{ meta.environment }}"
           tier: db
+          environment: "{{ mongodb.environment }}"
       spec:
         serviceName: "{{ meta.name }}-db-svc"
         replicas: 1
+        selector:
+          matchLabels:
+            app: eddi
+            tier: db
+            environment: "{{ mongodb.environment }}"
         template:
           metadata:
             labels:
               app: eddi
               tier: db
-              environment: "{{ meta.environment }}"
+              environment: "{{ mongodb.environment }}"
           spec:
             containers:
               - name: mongo
-                image: "{{ image.mongodb.image_name }}:{{ image.mongodb.tag }}"
+                image: "{{ mongodb.image_name }}:{{ mongodb.image_tag }}"
                 imagePullPolicy: IfNotPresent
                 ports:
                   - containerPort: 27017
@@ -62,19 +67,19 @@
         - metadata:
             name: db-storage
             annotations:
-              volume.beta.kubernetes.io/storage-class: "{{ meta.storage.class_name }}" 
+              volume.beta.kubernetes.io/storage-class: "{{ mongodb.storageclass_name }}" 
           spec:
             accessModes: [ "ReadWriteOnce" ]
             resources:
               requests:
-                storage: "{{ meta.storage.size }}"
+                storage: "{{ mongodb.storage_size }}"
 
 - name: 01-Wait for MangoDB server pod to come up
   k8s_info:
     kind: Pod
     namespace: '{{ meta.namespace }}'
     label_selectors:
-      - tier = db
+      - tier=db
     field_selectors:
       - status.phase=Running
   register: pod_mongodb

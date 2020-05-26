@@ -1,10 +1,10 @@
-FROM quay.io/operator-framework/ansible-operator:v0.15.2
+FROM quay.io/operator-framework/ansible-operator:v0.17.0
 
 LABEL name="EDDI Operator" \
       vendor="RHSCL" \
       version="v0.0.1" \
       release="1" \
-      summary="This operator is to deploy EDDI Chatbot on you cluster" \
+      summary="This operator is to deploy EDDI Chatbot in your cluster" \
       description="This operator will deploy EDDI Chatbot to the cluster."
 
 COPY licenses /licenses

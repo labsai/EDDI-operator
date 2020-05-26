@@ -24,7 +24,7 @@
     deploy_dir: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/deploy"
     pull_policy: Never
     REPLACE_IMAGE: labs.ai/eddi-operator:testing
-    custom_resource: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddioperator_cr.yaml'])) | from_yaml }}"
+    custom_resource: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddi_cr.yaml'])) | from_yaml }}"
   tasks:
   - block:
     - name: Delete the Operator Deployment
@@ -54,7 +54,7 @@
         namespace: '{{ namespace }}'
         definition: "{{ lookup('template', '/'.join([deploy_dir, 'operator.yaml'])) }}"
 
-    - name: Create the labs.ai/v1alpha1.Eddioperator
+    - name: Create the labs.ai/v1alpha1.Eddi
       k8s:
         state: present
         namespace: '{{ namespace }}'
