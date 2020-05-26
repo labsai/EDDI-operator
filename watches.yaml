@@ -1,5 +1,5 @@
 ---
 - version: v1alpha1
   group: labs.ai
-  kind: Eddioperator
+  kind: Eddi
   playbook: /opt/ansible/playbook.yaml

@@ -1,19 +1,12 @@
-- block:
+---
+- name: Setup mongo-db
+  when: no_mongo_setup_enable |bool
+  include_tasks: 01-mongo_db-deployment.yml
+  tags:
+  - db
+  - eddi
 
-  - name: Initial setup 
-    include: 00-inital-config.yml
-    tags:
-    - db
-    - eddi
-
-  - name: Setup mongo-db
-    when: no_mongo_setup_enable |bool
-    include: 01-mongo_db-deployment.yml
-    tags:
-    - db
-    - eddi
-
-  - name:  setup eddi 
-    include: 02-eddi-deployment.yml
-    tags:
-    - eddi
+- name:  setup eddi 
+  include_tasks: 02-eddi-deployment.yml
+  tags:
+  - eddi

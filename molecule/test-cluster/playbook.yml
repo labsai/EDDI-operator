@@ -7,21 +7,21 @@
     ansible_python_interpreter: '{{ ansible_playbook_python }}'
     deploy_dir: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/deploy"
     image_name: labs.ai/eddi-operator:testing
-    custom_resource: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddioperator_cr.yaml'])) | from_yaml }}"
+    custom_resource: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddi_cr.yaml'])) | from_yaml }}"
   tasks:
-  - name: Create the labs.ai/v1alpha1.Eddioperator
+  - name: Create the labs.ai/v1alpha1.Eddi
     k8s:
       namespace: '{{ namespace }}'
-      definition: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddioperator_cr.yaml'])) }}"
+      definition: "{{ lookup('file', '/'.join([deploy_dir, 'crds/replace_v1alpha1_eddi_cr.yaml'])) }}"
 
   - name: Get the newly created Custom Resource
     debug:
-      msg: "{{ lookup('k8s', group='labs.ai', api_version='v1alpha1', kind='Eddioperator', namespace=namespace, resource_name=custom_resource.metadata.name) }}"
+      msg: "{{ lookup('k8s', group='labs.ai', api_version='v1alpha1', kind='Eddi', namespace=namespace, resource_name=custom_resource.metadata.name) }}"
 
   - name: Wait 40s for reconciliation to run
     k8s_facts:
       api_version: 'v1alpha1'
-      kind: 'Eddioperator'
+      kind: 'Eddi'
       namespace: '{{ namespace }}'
       name: '{{ custom_resource.metadata.name }}'
     register: reconcile_cr
