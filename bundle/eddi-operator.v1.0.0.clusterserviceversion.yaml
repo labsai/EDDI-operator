@@ -27,7 +27,7 @@ metadata:
   namespace: placeholder
 spec:
   provider:
-    - name: LABS.AI
+    name: 'LABS.AI'
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
