@@ -17,13 +17,13 @@ metadata:
       ]
     categories: 'AI/Machine Learning, Developer Tools'
     certified: 'false'
-    createdAt: 2019-11-9T12:59:59Z
+    createdAt: 2020-05-26
     description: 'Basic Installation of EDDI, upgrade to new versions'
     containerImage: 'labsai:eddi:latest'
     support: 'Eddi'
     capabilities: Seamless Upgrades
     repository: 'https://github.com/labsai/EDDI-operator/'
-  name: eddi-operator.v1.0.0
+  name: eddi-operator.v1.0.1
   namespace: placeholder
 spec:
   provider:
@@ -31,11 +31,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - name: eddis.labs.ai
-      displayName: EDDI
-      description: Eddi operator description
-      kind: Eddi
+    - kind: Eddi
+      name: eddis.labs.ai
       version: v1alpha1
+      displayName: EDDI
+      description: Eddi operator 
   displayName: EDDI Operator
   description: |-
     ## About the managed application
@@ -110,18 +110,6 @@ spec:
                 name: eddi-operator
             spec:
               containers:
-              - command:
-                - /usr/local/bin/ao-logs
-                - /tmp/ansible-operator/runner
-                - stdout
-                image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
-                imagePullPolicy: Always
-                name: ansible
-                resources: {}
-                volumeMounts:
-                - mountPath: /tmp/ansible-operator/runner
-                  name: runner
-                  readOnly: true
               - env:
                 - name: WATCH_NAMESPACE
                   valueFrom:
@@ -133,7 +121,9 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: eddi-operator
-                image: "{{ lookup('env','RELATED_IMAGE_DB') }}"
+                - name: RELATED_IMAGE_DB
+                  value: registry.connect.redhat.com/labsai/eddi:latest
+                image: registry.connect.redhat.com/labsai/eddi-operator:latest
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
@@ -188,6 +178,12 @@ spec:
           - '*'
           verbs:
           - '*'
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - '*'
+          verbs:
+          - '*'
         serviceAccountName: eddi-operator
     strategy: deployment
   installModes:
@@ -199,7 +195,6 @@ spec:
     type: MultiNamespace
   - supported: true
     type: AllNamespaces
-  maturity: alpha
   keywords:
     - chatbot
     - conversational ui
@@ -209,9 +204,7 @@ spec:
   maintainers:
     - name: LABS.AI
       email: contact@labs.ai
-  labels: {}
-  selector:
-    matchLabels: {}
+  maturity: alpha
   links:
     - name: Project Home
       url: 'https://eddi.labs.ai'
@@ -219,5 +212,5 @@ spec:
       url: 'https://www.labs.ai'
     - name: Documentation
       url: 'https://docs.labs.ai'
-  # replaces: eddi-operator.v0.0.0
-  version: 1.0.0
+  replaces: eddi-operator.v1.0.0
+  version: 1.0.1
