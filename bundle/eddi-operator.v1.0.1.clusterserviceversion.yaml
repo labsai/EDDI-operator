@@ -6,6 +6,16 @@ metadata:
       [
         {
           "apiVersion": "labs.ai/v1alpha1",
+          "kind": "Eddioperator",
+          "metadata": {
+            "name": "eddioperator"
+          },
+          "spec": {
+            "size": 1
+          }
+        },
+        {
+          "apiVersion": "labs.ai/v1alpha1",
           "kind": "Eddi",
           "metadata": {
             "name": "eddi"
@@ -35,7 +45,12 @@ spec:
       name: eddis.labs.ai
       version: v1alpha1
       displayName: EDDI
-      description: Eddi operator 
+      description: Eddi Chatbot instance
+    - name: eddioperators.labs.ai
+      displayName: EDDI
+      description: Eddi operator description
+      kind: Eddioperator
+      version: v1alpha1
   displayName: EDDI Operator
   description: |-
     ## About the managed application

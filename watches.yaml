@@ -3,3 +3,8 @@
   group: labs.ai
   kind: Eddi
   playbook: /opt/ansible/playbook.yaml
+
+- version: v1alpha1
+  group: labs.ai
+  kind: Eddioperator
+  playbook: /opt/ansible/playbook.yaml
