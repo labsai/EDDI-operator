@@ -4,9 +4,4 @@ kind: Eddioperator
 metadata:
   name: eddioperator
 spec:
-  # Add fields here
   size: 1
-  image:
-    repository: labsai
-    image_name: eddi
-    tag: latest

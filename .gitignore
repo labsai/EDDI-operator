@@ -1,1 +1,3 @@
 /.idea/
+.osdk-scorecard.yaml
+.gitignore

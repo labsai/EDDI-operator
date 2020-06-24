@@ -1,4 +1,5 @@
 packageName: eddi-operator-certified
 channels:
-- currentCSV: eddi-operator.v1.0.1
+- currentCSV: eddi-operator.v1.0.2
   name: alpha
+defaultChannel: alpha
