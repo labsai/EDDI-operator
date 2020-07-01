@@ -6,9 +6,9 @@ metadata:
       [
         {
           "apiVersion": "labs.ai/v1alpha1",
-          "kind": "Eddi",
+          "kind": "Eddioperator",
           "metadata": {
-            "name": "eddi"
+            "name": "eddioperator"
           },
           "spec": {
             "size": 1
@@ -31,10 +31,10 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - name: eddis.labs.ai
+    - name: eddioperators.labs.ai
       displayName: EDDI
       description: Eddi operator description
-      kind: Eddi
+      kind: Eddioperator
       version: v1alpha1
   displayName: EDDI Operator
   description: |-
