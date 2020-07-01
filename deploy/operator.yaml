@@ -15,8 +15,7 @@ spec:
       serviceAccountName: eddi-operator
       containers:
         - name: operator
-          # Replace this with the built image name
-          image: registry.connect.redhat.com/labsai/eddi-operator:latest
+          image: registry.connect.redhat.com/labsai/eddi-operator:1.0.2
           imagePullPolicy: Always
           volumeMounts:
           - mountPath: /tmp/ansible-operator/runner
