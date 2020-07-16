@@ -4,22 +4,24 @@
 
 ## Usage
 
-Deploy an EDDI instance by creating a new EDDI resource in the desired Namespace.
+### Openshift Setup
 
-```Yaml
-apiVersion: labs.ai/v1alpha1
-kind: Eddi
-metadata:
-  name: eddi
-spec:
-  size: 1
-```
+#### Prerequisites
 
-The operator will deploy a MongoDB pod, an EDDI Instance and create a route to access the EDDI WebUI. The route is automatically created.
+* Openshift 4.3+ Deployment
+* Block Storage (Preferable with storage class)
 
-Example route based on the resource above deployed to a namespace called test: `eddi-route-test.apps.ocp.example.com`
+#### Installing the Operator from the RedHat Marketplace
 
-Additionally the storage class used for the MongoDB deployment can be set in the CustomResource:
+1. Head to the Operator section in the Admin Overview and go to the OperatorHub
+2. Choose which version of the EDDI Operator to use (Marketplace or normal)
+3. Click install and leave the defaults (All Namespaces, Update Channel alpha and Approval Strategy Automatic)
+4. Click subscribe
+
+#### Using the operator
+
+After the installation of the operator, go to the installed Operators menu point and click on the first EDDI menu on top and create a new Instance. Below is a minimal CustomResource. The storageclass_name has to be changed to the name of an existing StorageClass, the environment variable will be added as a label to the mongoDB deployment.
+
 
 ```yaml
 apiVersion: labs.ai/v1alpha1
@@ -33,3 +35,5 @@ spec:
     storageclass_name: managed-nfs-storage
     storage_size: 20G
 ```
+
+The operator will create a route automatically so you can access the EDDI admin panel. Per default the route will take the name of the CR. With the CR from above the route would look like this: `eddi-route-$NAMESPACE.apps.ocp.example.com` ($NAMESPACE will be the name of the project where the CR was created.)
