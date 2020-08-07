@@ -11,29 +11,24 @@ metadata:
             "name": "eddi"
           },
           "spec": {
-            "size": 1
-          }
-        },
-        {
-          "apiVersion": "labs.ai/v1alpha1",
-          "kind": "Eddioperator",
-          "metadata": {
-            "name": "eddioperator"
-          },
-          "spec": {
-            "size": 1
+            "size": 1,
+            "mongodb": {
+              "environment": "prod",
+              "storageclass_name": "",
+              "storage_size": "20G"
+            }
           }
         }
       ]
     categories: 'AI/Machine Learning, Developer Tools'
     certified: 'false'
-    createdAt: 2020-05-26
+    createdAt: 2020-07-31
     description: 'Basic Installation of EDDI, upgrade to new versions'
     containerImage: 'labsai:eddi:latest'
     support: 'Eddi'
     capabilities: Seamless Upgrades
     repository: 'https://github.com/labsai/EDDI-operator/'
-  name: eddi-operator.v1.0.2
+  name: eddi-operator.v1.0.3
   namespace: placeholder
 spec:
   provider:
@@ -50,6 +45,18 @@ spec:
       - description: The number of Eddi pods to deploy
         displayName: Size
         path: size
+      - description: The properties of the MongoDB
+        displayName: MongoDB
+        path: mongodb
+      - description: The environment in which the MongoDB is running. e.g. prod
+        displayName: MongoDB Environment
+        path: mongodb/environment
+      - description: The storageclass which will be used 
+        displayName: Storageclass Name
+        path: mongodb/storageclass_name
+      - description: The size of the persistent storage 
+        displayName: Storage Size
+        path: mongodb/storage_size
       statusDescriptors:
       - description: The current status of the Eddi cluster.
         displayName: Deployment Status
@@ -76,39 +83,6 @@ spec:
       - kind: Eddi
         version: v1alpha1
       - kind: ServiceMonitor
-        version: v1
-    - kind: Eddioperator
-      name: eddioperators.labs.ai
-      version: v1alpha1
-      displayName: EDDI
-      description: Eddi operator description
-      specDescriptors:
-      - description: The number of Eddi pods to deploy
-        displayName: Size
-        path: size
-        x-descriptors:
-          - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:Deployment'
-          - 'urn:alm:descriptor:com.tectonic.ui:podCount'
-      statusDescriptors:
-      - description: The status of each of the member Pods for the Eddi cluster.
-        displayName: Pod Status
-        path: podStatuses
-        x-descriptors:
-        - 'urn:alm:descriptor:com.tectonic.ui:podStatuses'
-      - description: The status of each of the member Pods for the Eddi cluster.
-        displayName: Pod amount
-        path: size
-        x-descriptors:
-        - 'urn:alm:descriptor:com.tectonic.ui:fieldGroup:Deployment'
-        - 'urn:alm:descriptor:com.tectonic.ui:podCount'
-      resources:
-      - kind: Service
-        version: v1
-      - kind: StatefulSet
-        version: apps/v1
-      - kind: Deployment
-        version: apps/v1
-      - kind: Route
         version: v1
   displayName: EDDI Operator
   description: |-
@@ -172,6 +146,10 @@ spec:
       name: eddi
     spec:
       size: 1
+      mongodb:
+        environment: prod
+        storageclass_name: ""
+        storage_size: 20G
     ```
 
     The operator will deploy a MongoDB pod, an EDDI Instance and create a route to access the EDDI WebUI. The route is automatically created. 
@@ -210,7 +188,7 @@ spec:
                   value: eddi-operator
                 - name: RELATED_IMAGE_DB
                   value: registry.connect.redhat.com/labsai/eddi:latest
-                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.2
+                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.3
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
@@ -299,5 +277,5 @@ spec:
       url: 'https://www.labs.ai'
     - name: Documentation
       url: 'https://docs.labs.ai'
-  replaces: eddi-operator.v1.0.0
-  version: 1.0.2
+  replaces: eddi-operator.v1.0.2
+  version: 1.0.3

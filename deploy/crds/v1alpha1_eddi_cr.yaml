@@ -4,3 +4,7 @@ metadata:
   name: eddi
 spec:
   size: 1
+  mongodb:
+    environment: prod
+    storageclass_name: ""
+    storage_size: 20G

@@ -35,6 +35,19 @@ spec:
               description: Size is the size of the eddi deployment
               format: int32
               type: integer
+            mongodb:
+              description: Mongodb defines the properties of the deployed mongodb
+              properties:
+                environment:
+                  description: Environment defines the environment of the database
+                  type: string
+                storageclass_name:
+                  description: Storageclass_name defines the storageclass which will be used
+                  type: string
+                storage_size:
+                  description: Storage_size defines the size of the persistentvolumeclaim
+                  type: string
+              type: object
           required:
           - size
           type: object
