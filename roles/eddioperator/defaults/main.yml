@@ -6,13 +6,14 @@ image:
   image_name: eddi
   tag: latest
 
-
 mongodb:
   environment: prod
   storageclass_name: managed-nfs-storage
   storage_size: 20G
-  image_name: mongo
-  image_tag: 4.2
+
+mongodb_image:
+  name: mongo
+  tag: 4.2
 
 # Default when condition is false
 # playbook will overwrite this variable
