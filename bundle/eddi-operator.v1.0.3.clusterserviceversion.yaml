@@ -14,7 +14,7 @@ metadata:
             "size": 1,
             "mongodb": {
               "environment": "prod",
-              "storageclass_name": managed-nfs-storage,
+              "storageclass_name": "managed-nfs-storage",
               "storage_size": "20G"
             }
           }
