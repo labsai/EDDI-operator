@@ -28,7 +28,7 @@ metadata:
     support: 'Eddi'
     capabilities: Seamless Upgrades
     repository: 'https://github.com/labsai/EDDI-operator/'
-  name: eddi-operator.v1.0.3
+  name: eddi-operator.v1.0.4
   namespace: placeholder
 spec:
   provider:
@@ -188,7 +188,7 @@ spec:
                   value: eddi-operator
                 - name: RELATED_IMAGE_DB
                   value: registry.connect.redhat.com/labsai/eddi:latest
-                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.3
+                image: registry.connect.redhat.com/labsai/eddi-operator:1.0.4
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
@@ -278,4 +278,4 @@ spec:
     - name: Documentation
       url: 'https://docs.labs.ai'
   replaces: eddi-operator.v1.0.2
-  version: 1.0.3
+  version: 1.0.4
