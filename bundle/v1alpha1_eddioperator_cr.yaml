@@ -1,0 +1,7 @@
+
+apiVersion: labs.ai/v1alpha1
+kind: Eddioperator
+metadata:
+  name: eddioperator
+spec:
+  size: 1

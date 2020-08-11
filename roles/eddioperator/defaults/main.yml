@@ -9,7 +9,7 @@ image:
 
 mongodb:
   environment: prod
-  storageclass_name: ""
+  storageclass_name: managed-nfs-storage
   storage_size: 20G
   image_name: mongo
   image_tag: 4.2
