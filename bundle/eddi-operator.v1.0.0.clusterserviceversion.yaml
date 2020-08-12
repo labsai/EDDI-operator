@@ -39,54 +39,33 @@ spec:
   displayName: EDDI Operator
   description: |-
     ## About the managed application
-
     **Enterprise-Ready Open Source Chatbot Platform**
-
     create, run and maintain customizable chatbots
-
     **Scale Horizontally**
-
     scale out horizontally due to resource-oriented design & RESTful
     architecture
-
     **NLP Parser**
-
     match user inputs as words and phrases even in case of spelling mistakes or
     missing spaces between words
-
     **Behavior Rules**
-
     make decisions with predefined and custom conditions
-
     **Conversation Memory**
-
     store context information between user interactions in order to make better
     conversation decisions
-
     **Extension Oriented**
-
     build loosely coupled plugins that allows the integration of new algorithms
     and communication to other systems
-
     **Modular Bot Configurations**
-
     share bot knowledge across bots in order to reuse components and thus speed
     up further developments
-
     **Versioned Configurations**
-
     track changes of all of your configurations. Use different versions of your
     configurations in different bots, to allow multiple bots with shared
     knowledge
-
     **Developed as Microservices, Restful by Design**
-
     we don't need to comment on that, do we...? ;-) 
-
     ## About this Operator
-
     Launch and update EDDI instances
-
     ## Prerequisites for enabling this Operator
     
     You need to first launch mongodb before you should launch EDDI, preferably
