@@ -1,7 +1,7 @@
 # EDDI Operator — Makefile
 # Convenience targets for build, test, bundle, and image management
 
-VERSION ?= 6.0.0-SNAPSHOT
+VERSION ?= 6.0.0
 REGISTRY ?= quay.io
 ORG ?= labsai
 OPERATOR_IMG ?= $(REGISTRY)/$(ORG)/eddi-operator:$(VERSION)
