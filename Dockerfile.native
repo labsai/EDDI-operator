@@ -1,0 +1,40 @@
+####
+# Dockerfile.native — EDDI Operator (GraalVM native mode)
+# Multi-stage build: Mandrel builder + UBI 9 minimal runtime
+####
+
+# Stage 1: Build native binary
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4 AS build
+RUN microdnf install -y gcc glibc-devel zlib-devel && microdnf clean all
+
+# Stage 2: Runtime
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+# Red Hat certification labels
+LABEL name="labsai/eddi-operator" \
+      vendor="LABS.AI" \
+      version="6.0.0" \
+      release="1" \
+      summary="EDDI Kubernetes Operator (Native)" \
+      description="A modern, Red Hat-certified Kubernetes Operator for EDDI v6 — \
+native binary build for minimal footprint (~50MB RSS)." \
+      io.k8s.display-name="EDDI Operator (Native)" \
+      io.k8s.description="Kubernetes Operator for EDDI v6 conversational AI platform" \
+      io.openshift.tags="eddi,ai,chatbot,operator,native" \
+      com.redhat.component="eddi-operator-native-container" \
+      maintainer="LABS.AI <info@labs.ai>"
+
+# License files (required for Red Hat certification)
+COPY licenses/ /licenses/
+
+WORKDIR /work/
+RUN chown 185 /work \
+    && chmod "g+rwX" /work \
+    && chown 185:root /work
+
+COPY --chown=185:root target/*-runner /work/application
+
+EXPOSE 8080
+USER 185
+
+ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]

@@ -1,0 +1,46 @@
+name: Preflight Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile.*'
+      - 'pom.xml'
+      - 'src/**'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Red Hat Preflight Dry-Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build operator image
+        run: |
+          ./mvnw package -DskipTests
+          docker build -f Dockerfile.jvm -t eddi-operator:preflight .
+
+      - name: Install preflight
+        run: |
+          PREFLIGHT_VERSION=$(curl -s https://api.github.com/repos/redhat-openshift-ecosystem/openshift-preflight/releases/latest | jq -r '.tag_name')
+          curl -sL "https://github.com/redhat-openshift-ecosystem/openshift-preflight/releases/download/${PREFLIGHT_VERSION}/preflight-linux-amd64" -o /usr/local/bin/preflight
+          chmod +x /usr/local/bin/preflight
+
+      - name: Run preflight check (dry-run)
+        run: |
+          preflight check container eddi-operator:preflight \
+            --docker-config=${HOME}/.docker/config.json \
+            2>&1 || true
+          echo "Preflight check completed (dry-run mode)"

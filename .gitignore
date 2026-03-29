@@ -1,1 +1,39 @@
-/.idea/
+# Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Quarkus
+.quarkus/
+
+# Native image
+*.o
+*.so
+*.dylib
+
+# Logs
+*.log

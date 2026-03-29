@@ -1,0 +1,78 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "EDDI Server Status",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "up{job=~\".*eddi.*server.*\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "title": "Request Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{job=~\".*eddi.*server.*\"}[5m])",
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ]
+    },
+    {
+      "title": "Response Latency (P99)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=~\".*eddi.*server.*\"}[5m]))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "title": "JVM Memory Usage",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=~\".*eddi.*server.*\"}",
+          "legendFormat": "{{area}} {{id}}"
+        }
+      ]
+    },
+    {
+      "title": "Active Connections",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {
+          "expr": "http_server_active_requests{job=~\".*eddi.*server.*\"}",
+          "legendFormat": "Active"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["eddi", "operator"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "EDDI Overview",
+  "uid": "eddi-overview"
+}
