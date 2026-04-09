@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.auth;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -11,7 +12,6 @@ import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDep
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Manages a Keycloak Deployment for authentication.
@@ -31,38 +31,39 @@ public class KeycloakDeploymentDR extends CRUDKubernetesDependentResource<Deploy
         var authManaged = spec.getAuth().getManaged();
         var name = Labels.resourceName(eddi, "keycloak");
 
-        var env = new ArrayList<EnvVar>();
-        env.add(new EnvVarBuilder().withName("KEYCLOAK_ADMIN").withValue("admin").build());
+        // Resolve image from spec
+        var imgSpec = authManaged.getImage();
+        var image = Defaults.resolveImage(imgSpec.getRepository(), imgSpec.getTag());
 
-        // Admin password from secret if provided
+        // Resolve admin credential secret name
         var adminSecretRef = authManaged.getAdminSecretRef();
-        if (adminSecretRef != null && !adminSecretRef.isBlank()) {
-            env.add(new EnvVarBuilder()
-                    .withName("KEYCLOAK_ADMIN_PASSWORD")
-                    .withNewValueFrom()
-                        .withNewSecretKeyRef()
-                            .withName(adminSecretRef)
-                            .withKey("password")
-                        .endSecretKeyRef()
-                    .endValueFrom()
-                    .build());
-        } else {
-            env.add(new EnvVarBuilder()
-                    .withName("KEYCLOAK_ADMIN_PASSWORD")
-                    .withValue("admin")
-                    .build());
-        }
+        var credentialSecretName = (adminSecretRef != null && !adminSecretRef.isBlank())
+                ? adminSecretRef
+                : Labels.resourceName(eddi, "keycloak-admin");
 
-        var resources = new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(authManaged.getResources().getRequests().getCpu()),
-                        "memory", new Quantity(authManaged.getResources().getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(authManaged.getResources().getLimits().getCpu()),
-                        "memory", new Quantity(authManaged.getResources().getLimits().getMemory())
-                ))
-                .build();
+        var env = new ArrayList<EnvVar>();
+        // Admin username from secret
+        env.add(new EnvVarBuilder()
+                .withName("KEYCLOAK_ADMIN")
+                .withNewValueFrom()
+                    .withNewSecretKeyRef()
+                        .withName(credentialSecretName)
+                        .withKey("username")
+                    .endSecretKeyRef()
+                .endValueFrom()
+                .build());
+        // Admin password from secret
+        env.add(new EnvVarBuilder()
+                .withName("KEYCLOAK_ADMIN_PASSWORD")
+                .withNewValueFrom()
+                    .withNewSecretKeyRef()
+                        .withName(credentialSecretName)
+                        .withKey("password")
+                    .endSecretKeyRef()
+                .endValueFrom()
+                .build());
+
+        var resources = Defaults.buildResources(authManaged.getResources());
 
         return new DeploymentBuilder()
                 .withNewMetadata()
@@ -82,7 +83,7 @@ public class KeycloakDeploymentDR extends CRUDKubernetesDependentResource<Deploy
                         .withNewSpec()
                             .addNewContainer()
                                 .withName("keycloak")
-                                .withImage("quay.io/keycloak/keycloak:24.0")
+                                .withImage(image)
                                 .withArgs(List.of(
                                         "production".equals(authManaged.getMode()) ? "start" : "start-dev"
                                 ))
@@ -94,6 +95,7 @@ public class KeycloakDeploymentDR extends CRUDKubernetesDependentResource<Deploy
                                 ))
                                 .withEnv(env)
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .withNewReadinessProbe()
                                     .withNewHttpGet()
                                         .withPath("/health/ready")
@@ -102,6 +104,15 @@ public class KeycloakDeploymentDR extends CRUDKubernetesDependentResource<Deploy
                                     .withInitialDelaySeconds(30)
                                     .withPeriodSeconds(10)
                                 .endReadinessProbe()
+                                .withNewLivenessProbe()
+                                    .withNewHttpGet()
+                                        .withPath("/health/live")
+                                        .withPort(new IntOrString(8080))
+                                    .endHttpGet()
+                                    .withInitialDelaySeconds(60)
+                                    .withPeriodSeconds(15)
+                                    .withFailureThreshold(3)
+                                .endLivenessProbe()
                             .endContainer()
                         .endSpec()
                     .endTemplate()

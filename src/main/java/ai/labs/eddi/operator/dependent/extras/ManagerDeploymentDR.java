@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.extras;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -31,18 +32,9 @@ public class ManagerDeploymentDR extends CRUDKubernetesDependentResource<Deploym
 
         var imageRepo = managerSpec.getImage().getRepository();
         var imageTag = managerSpec.getImage().getTag();
-        var image = imageRepo + ":" + ((imageTag == null || imageTag.isBlank()) ? "latest" : imageTag);
+        var image = Defaults.resolveImage(imageRepo, imageTag);
 
-        var resources = new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(managerSpec.getResources().getRequests().getCpu()),
-                        "memory", new Quantity(managerSpec.getResources().getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(managerSpec.getResources().getLimits().getCpu()),
-                        "memory", new Quantity(managerSpec.getResources().getLimits().getMemory())
-                ))
-                .build();
+        var resources = Defaults.buildResources(managerSpec.getResources());
 
         var eddiServiceName = Labels.resourceName(eddi, "server");
 
@@ -79,6 +71,7 @@ public class ManagerDeploymentDR extends CRUDKubernetesDependentResource<Deploym
                                                 .build()
                                 ))
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .withNewReadinessProbe()
                                     .withNewHttpGet()
                                         .withPath("/")

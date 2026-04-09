@@ -7,6 +7,8 @@ public class ManagedDatabaseSpec {
 
     private boolean enabled = true;
 
+    private ComponentImageSpec image = new ComponentImageSpec();
+
     private StorageSpec storage = new StorageSpec("20Gi", "");
 
     private ResourcesSpec resources = new ResourcesSpec(
@@ -20,6 +22,14 @@ public class ManagedDatabaseSpec {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public ComponentImageSpec getImage() {
+        return image;
+    }
+
+    public void setImage(ComponentImageSpec image) {
+        this.image = image;
     }
 
     public StorageSpec getStorage() {

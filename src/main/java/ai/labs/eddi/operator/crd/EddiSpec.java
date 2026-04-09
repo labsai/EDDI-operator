@@ -1,11 +1,13 @@
 package ai.labs.eddi.operator.crd;
 
 import ai.labs.eddi.operator.crd.spec.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 
 /**
  * Top-level spec for the Eddi custom resource.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EddiSpec {
 
     @JsonPropertyDescription("EDDI version — maps to the container image tag")
@@ -47,8 +49,8 @@ public class EddiSpec {
     @JsonPropertyDescription("EDDI server resource requests and limits")
     private ResourcesSpec resources = new ResourcesSpec();
 
-    @JsonPropertyDescription("Backup and restore configuration")
-    private BackupSpec backup = new BackupSpec();
+    // NOTE: BackupSpec is planned for Phase 3 (Full Lifecycle) and is not yet implemented.
+    // It will be added back to the CRD when BackupCronJobDR is ready.
 
     @JsonPropertyDescription("CORS allowed origins")
     private String cors = "http://localhost:3000,http://localhost:7070";
@@ -160,14 +162,6 @@ public class EddiSpec {
 
     public void setResources(ResourcesSpec resources) {
         this.resources = resources;
-    }
-
-    public BackupSpec getBackup() {
-        return backup;
-    }
-
-    public void setBackup(BackupSpec backup) {
-        this.backup = backup;
     }
 
     public String getCors() {

@@ -10,7 +10,7 @@ import java.util.List;
  */
 public class EddiStatus {
 
-    private long observedGeneration;
+    private Long observedGeneration;
 
 
     /**
@@ -93,11 +93,11 @@ public class EddiStatus {
         this.conditions = conditions;
     }
 
-    public long getObservedGeneration() {
+    public Long getObservedGeneration() {
         return observedGeneration;
     }
 
-    public void setObservedGeneration(long observedGeneration) {
+    public void setObservedGeneration(Long observedGeneration) {
         this.observedGeneration = observedGeneration;
     }
 }

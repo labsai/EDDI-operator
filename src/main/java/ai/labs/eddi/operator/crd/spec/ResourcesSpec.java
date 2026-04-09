@@ -46,7 +46,9 @@ public class ResourcesSpec {
         private String memory;
 
         public ResourceQuantity() {
-            this(DEFAULT_REQUEST_CPU, DEFAULT_REQUEST_MEMORY);
+            // No-arg constructor for Jackson.
+            // Defaults are intentionally unset (null) so that
+            // the parent ResourcesSpec constructor provides correct values.
         }
 
         public ResourceQuantity(String cpu, String memory) {

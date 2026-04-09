@@ -8,6 +8,8 @@ import io.fabric8.kubernetes.api.model.ConditionBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import org.jboss.logging.Logger;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class StatusUpdater {
 
+    private static final Logger LOG = Logger.getLogger(StatusUpdater.class);
+
     /**
      * Computes the full status for the Eddi CR based on child resource states.
      */
@@ -32,8 +36,7 @@ public class StatusUpdater {
         var namespace = eddi.getMetadata().getNamespace();
 
         // Fix #8: Set observedGeneration
-        status.setObservedGeneration(eddi.getMetadata().getGeneration() != null
-                ? eddi.getMetadata().getGeneration() : 0L);
+        status.setObservedGeneration(eddi.getMetadata().getGeneration());
         status.setVersion(spec.getVersion());
         status.setReplicas(spec.getReplicas());
 
@@ -62,7 +65,7 @@ public class StatusUpdater {
                         && depStatus.getUpdatedReplicas() < spec.getReplicas();
             }
         } catch (Exception e) {
-            // Deployment not found yet
+            LOG.debugf(e, "EDDI Deployment not found yet for '%s'", eddi.getMetadata().getName());
         }
 
         status.setReadyReplicas(readyReplicas);
@@ -178,6 +181,7 @@ public class StatusUpdater {
                     && sts.getStatus().getReadyReplicas() != null
                     && sts.getStatus().getReadyReplicas() > 0;
         } catch (Exception e) {
+            LOG.debugf(e, "Datastore StatefulSet '%s' not available yet", stsName);
             return false;
         }
     }
@@ -201,6 +205,7 @@ public class StatusUpdater {
                     && sts.getStatus().getReadyReplicas() != null
                     && sts.getStatus().getReadyReplicas() > 0;
         } catch (Exception e) {
+            LOG.debugf(e, "NATS StatefulSet '%s' not available yet", stsName);
             return false;
         }
     }
@@ -221,7 +226,7 @@ public class StatusUpdater {
                 return scheme + "://" + route.getSpec().getHost();
             }
         } catch (Exception e) {
-            // Not on OpenShift or Route not found
+            LOG.debugf(e, "Route not found for '%s' (expected on vanilla K8s)", eddi.getMetadata().getName());
         }
 
         // Try Ingress
@@ -240,7 +245,7 @@ public class StatusUpdater {
                 return scheme + "://" + host;
             }
         } catch (Exception e) {
-            // Ingress not found
+            LOG.debugf(e, "Ingress not found for '%s'", eddi.getMetadata().getName());
         }
 
         return "";

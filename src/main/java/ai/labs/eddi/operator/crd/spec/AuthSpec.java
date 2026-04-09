@@ -44,6 +44,7 @@ public class AuthSpec {
 
     public static class ManagedAuthSpec {
         private boolean enabled = false;
+        private ComponentImageSpec image = new ComponentImageSpec("quay.io/keycloak/keycloak", "26.0");
         private String adminSecretRef = "";
         /**
          * Keycloak mode: "dev" uses start-dev with ephemeral storage,
@@ -58,6 +59,14 @@ public class AuthSpec {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public ComponentImageSpec getImage() {
+            return image;
+        }
+
+        public void setImage(ComponentImageSpec image) {
+            this.image = image;
         }
 
         public String getAdminSecretRef() {

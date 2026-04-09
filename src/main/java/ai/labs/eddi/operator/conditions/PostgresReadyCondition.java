@@ -7,12 +7,16 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 
+import org.jboss.logging.Logger;
+
 /**
  * ReadyPostcondition for the PostgreSQL StatefulSet.
  * Returns true when the managed PostgreSQL has at least one ready replica,
  * or when PostgreSQL is external (assumed ready).
  */
 public class PostgresReadyCondition implements Condition<HasMetadata, EddiResource> {
+
+    private static final Logger LOG = Logger.getLogger(PostgresReadyCondition.class);
 
     @Override
     public boolean isMet(DependentResource<HasMetadata, EddiResource> dependentResource,
@@ -35,6 +39,7 @@ public class PostgresReadyCondition implements Condition<HasMetadata, EddiResour
                     && sts.getStatus().getReadyReplicas() != null
                     && sts.getStatus().getReadyReplicas() > 0;
         } catch (Exception e) {
+            LOG.debugf(e, "PostgreSQL StatefulSet '%s' not available yet", stsName);
             return false;
         }
     }

@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.datastore;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
@@ -29,16 +30,14 @@ public class MongoStatefulSetDR extends CRUDKubernetesDependentResource<Stateful
         var managed = spec.getDatastore().getManaged();
         var name = Labels.resourceName(eddi, "mongodb");
 
-        var resources = new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(managed.getResources().getRequests().getCpu()),
-                        "memory", new Quantity(managed.getResources().getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(managed.getResources().getLimits().getCpu()),
-                        "memory", new Quantity(managed.getResources().getLimits().getMemory())
-                ))
-                .build();
+        var resources = Defaults.buildResources(managed.getResources());
+
+        // Resolve image: use spec override or default to mongo:7.0
+        var imgSpec = managed.getImage();
+        var image = Defaults.resolveImage(
+                (imgSpec.getRepository() == null || imgSpec.getRepository().isBlank()) ? "mongo" : imgSpec.getRepository(),
+                (imgSpec.getTag() == null || imgSpec.getTag().isBlank()) ? "7.0" : imgSpec.getTag()
+        );
 
         var storageSize = managed.getStorage().getSize();
         var storageClassName = managed.getStorage().getStorageClassName();
@@ -79,7 +78,7 @@ public class MongoStatefulSetDR extends CRUDKubernetesDependentResource<Stateful
                         .withNewSpec()
                             .addNewContainer()
                                 .withName("mongodb")
-                                .withImage("mongo:7.0")
+                                .withImage(image)
                                 .withPorts(List.of(
                                         new ContainerPortBuilder()
                                                 .withName("mongodb")
@@ -87,6 +86,7 @@ public class MongoStatefulSetDR extends CRUDKubernetesDependentResource<Stateful
                                                 .build()
                                 ))
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .addNewVolumeMount()
                                     .withName("data")
                                     .withMountPath("/data/db")
@@ -98,6 +98,14 @@ public class MongoStatefulSetDR extends CRUDKubernetesDependentResource<Stateful
                                     .withInitialDelaySeconds(10)
                                     .withPeriodSeconds(10)
                                 .endReadinessProbe()
+                                .withNewLivenessProbe()
+                                    .withNewExec()
+                                        .withCommand("mongosh", "--eval", "db.adminCommand('ping')")
+                                    .endExec()
+                                    .withInitialDelaySeconds(30)
+                                    .withPeriodSeconds(15)
+                                    .withFailureThreshold(3)
+                                .endLivenessProbe()
                             .endContainer()
                         .endSpec()
                     .endTemplate()

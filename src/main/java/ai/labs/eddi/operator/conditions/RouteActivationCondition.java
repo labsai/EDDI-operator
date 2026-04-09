@@ -6,11 +6,15 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 
+import org.jboss.logging.Logger;
+
 /**
  * Activates the Route DR when running on OpenShift and exposure type is "auto" or "route".
  * Caches the OpenShift detection result for the lifecycle of the condition instance.
  */
 public class RouteActivationCondition implements Condition<HasMetadata, EddiResource> {
+
+    private static final Logger LOG = Logger.getLogger(RouteActivationCondition.class);
 
     private volatile Boolean isOpenShift = null;
 
@@ -37,6 +41,7 @@ public class RouteActivationCondition implements Condition<HasMetadata, EddiReso
                     .get();
             isOpenShift = routeCrd != null;
         } catch (Exception e) {
+            LOG.debugf(e, "OpenShift Route CRD not detected, assuming vanilla Kubernetes");
             isOpenShift = false;
         }
         return isOpenShift;

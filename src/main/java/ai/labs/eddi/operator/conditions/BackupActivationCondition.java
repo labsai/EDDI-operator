@@ -7,7 +7,8 @@ import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 
 /**
- * Activates backup DRs when spec.backup.enabled=true.
+ * Placeholder for Phase 3 (Full Lifecycle) backup feature.
+ * Always returns false until BackupCronJobDR is implemented.
  */
 public class BackupActivationCondition implements Condition<HasMetadata, EddiResource> {
 
@@ -15,6 +16,7 @@ public class BackupActivationCondition implements Condition<HasMetadata, EddiRes
     public boolean isMet(DependentResource<HasMetadata, EddiResource> dependentResource,
                           EddiResource eddi,
                           Context<EddiResource> context) {
-        return eddi.getSpec().getBackup().isEnabled();
+        // Phase 3: Will check spec.backup.enabled when BackupCronJobDR is implemented
+        return false;
     }
 }

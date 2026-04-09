@@ -7,7 +7,6 @@
 - [Configuration Reference](#configuration-reference)
 - [Deployment Examples](#deployment-examples)
 - [Monitoring](#monitoring)
-- [Backup & Restore](#backup--restore)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -32,7 +31,7 @@ metadata:
   namespace: olm
 spec:
   sourceType: grpc
-  image: quay.io/labsai/eddi-operator-catalog:latest
+  image: quay.io/labsai/eddi-operator-catalog:6.0.0
   displayName: EDDI Operator
   publisher: LABS.AI
 EOF
@@ -83,7 +82,9 @@ This deploys EDDI with:
 - In-memory messaging
 - No authentication
 - Auto-detected network exposure
-- Manager UI enabled
+- Manager UI disabled (opt-in via `manager.enabled: true`)
+- Auto-generated Vault master key secret
+- Restricted security context on all containers
 
 ### Full Example
 
@@ -106,23 +107,34 @@ spec:
   datastore:
     type: postgres
     managed:
-      enabled: false
-    external:
-      secretRef: production-pg-credentials
+      enabled: true
+      image:
+        repository: my-registry.example.com/postgres
+        tag: "16-alpine"
+      storage:
+        size: 50Gi
+        storageClassName: gp3
 
   messaging:
     type: nats
-    external:
-      url: nats://nats.messaging:4222
+    managed:
+      enabled: true
+      image:
+        repository: my-registry.example.com/nats
+        tag: "2.10-alpine"
 
   vault:
     masterKeySecretRef: eddi-vault-key
 
   auth:
     enabled: true
-    external:
-      authServerUrl: https://keycloak.example.com/realms/eddi
-      clientId: eddi-backend
+    managed:
+      enabled: true
+      mode: production
+      adminSecretRef: keycloak-admin-secret
+      image:
+        repository: my-registry.example.com/keycloak/keycloak
+        tag: "26.0"
 
   exposure:
     type: ingress
@@ -163,17 +175,6 @@ spec:
       cpu: "2"
       memory: 2Gi
 
-  backup:
-    enabled: true
-    schedule: "0 2 * * *"
-    retentionDays: 30
-    storage:
-      type: s3
-      s3:
-        bucket: eddi-backups
-        region: eu-central-1
-        secretRef: s3-backup-credentials
-
   cors:
     origins: "https://app.example.com"
 
@@ -186,22 +187,30 @@ spec:
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `spec.version` | string | `"6.0.0"` | EDDI version (image tag) |
-| `spec.replicas` | int | `1` | Number of EDDI replicas |
+| `spec.replicas` | int | `1` | Number of EDDI replicas (must be >= 1) |
 | `spec.image.repository` | string | `"labsai/eddi"` | Container image repository |
 | `spec.image.tag` | string | `""` | Image tag (empty = use version) |
 | `spec.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
 | `spec.datastore.type` | string | `"mongodb"` | `"mongodb"` or `"postgres"` |
 | `spec.datastore.managed.enabled` | bool | `true` | Deploy managed database |
+| `spec.datastore.managed.image.repository` | string | `""` | Database image override |
+| `spec.datastore.managed.image.tag` | string | `""` | Database image tag override |
 | `spec.datastore.external.connectionString` | string | `""` | External DB connection URI |
 | `spec.datastore.external.secretRef` | string | `""` | Secret with DB credentials |
 | `spec.messaging.type` | string | `"in-memory"` | `"in-memory"` or `"nats"` |
-| `spec.vault.masterKeySecretRef` | string | `""` | Secret with vault master key |
+| `spec.messaging.managed.image.repository` | string | `"nats"` | NATS image repository |
+| `spec.messaging.managed.image.tag` | string | `"2.10-alpine"` | NATS image tag |
+| `spec.vault.masterKeySecretRef` | string | `""` | Secret with vault master key (auto-generated if empty) |
 | `spec.auth.enabled` | bool | `false` | Enable OIDC authentication |
+| `spec.auth.managed.enabled` | bool | `false` | Deploy managed Keycloak |
+| `spec.auth.managed.mode` | string | `"dev"` | `"dev"` or `"production"` |
+| `spec.auth.managed.adminSecretRef` | string | `""` | Keycloak admin secret (auto-generated if empty) |
+| `spec.auth.managed.image.repository` | string | `"quay.io/keycloak/keycloak"` | Keycloak image |
+| `spec.auth.managed.image.tag` | string | `"26.0"` | Keycloak version |
 | `spec.exposure.type` | string | `"auto"` | `"auto"`, `"route"`, `"ingress"`, `"none"` |
-| `spec.manager.enabled` | bool | `true` | Deploy Manager UI |
+| `spec.manager.enabled` | bool | `false` | Deploy Manager UI |
 | `spec.monitoring.serviceMonitor.enabled` | bool | `false` | Create ServiceMonitor |
 | `spec.autoscaling.enabled` | bool | `false` | Enable HPA |
-| `spec.backup.enabled` | bool | `false` | Enable automated backups |
 
 ### Status Fields
 
@@ -212,6 +221,7 @@ spec:
 | `status.replicas` | Desired replica count |
 | `status.readyReplicas` | Number of ready replicas |
 | `status.url` | External URL (from Route/Ingress) |
+| `status.observedGeneration` | Last reconciled CR generation (used by ArgoCD) |
 | `status.conditions` | Kubernetes-standard conditions array |
 
 ### Status Conditions
@@ -237,6 +247,8 @@ metadata:
   name: dev-eddi
 spec:
   version: "6.0.0"
+  manager:
+    enabled: true
   datastore:
     type: mongodb
     managed:
@@ -267,6 +279,35 @@ spec:
       url: nats://nats-operator.nats:4222
 ```
 
+### Air-Gapped / Enterprise Registry
+
+```yaml
+apiVersion: eddi.labs.ai/v1beta1
+kind: Eddi
+metadata:
+  name: airgapped-eddi
+spec:
+  version: "6.0.0"
+  image:
+    repository: registry.internal.corp/eddi/eddi
+    pullSecrets:
+      - internal-registry-creds
+  datastore:
+    type: postgres
+    managed:
+      enabled: true
+      image:
+        repository: registry.internal.corp/postgres
+        tag: "16-alpine"
+  messaging:
+    type: nats
+    managed:
+      enabled: true
+      image:
+        repository: registry.internal.corp/nats
+        tag: "2.10-alpine"
+```
+
 ---
 
 ## Monitoring
@@ -289,32 +330,6 @@ When `monitoring.alerts.enabled: true`:
 
 ---
 
-## Backup & Restore
-
-### Enable Backups
-
-```yaml
-spec:
-  backup:
-    enabled: true
-    schedule: "0 2 * * *"    # Daily at 2 AM
-    retentionDays: 7
-    storage:
-      type: pvc
-      pvc:
-        size: 50Gi
-```
-
-### Trigger Restore
-
-Annotate the CR to trigger a restore:
-
-```bash
-kubectl annotate eddi my-eddi eddi.labs.ai/restore-from=backup-2026-03-29 --overwrite
-```
-
----
-
 ## Troubleshooting
 
 ### Check Operator Logs
@@ -329,6 +344,14 @@ kubectl logs -l app.kubernetes.io/name=eddi-operator -f
 kubectl get eddi my-eddi -o yaml
 ```
 
+### Check Events
+
+```bash
+kubectl describe eddi my-eddi
+```
+
+Events include: `ReconcileSucceeded`, `ReconcileFailed`, `ReconcileError`, `SpecInvalid`, `CleanupStarted`.
+
 ### Check Conditions
 
 ```bash
@@ -340,6 +363,7 @@ kubectl get eddi my-eddi -o jsonpath='{.status.conditions}' | jq .
 | Issue | Cause | Resolution |
 |---|---|---|
 | Phase: Pending | Database not ready | Check managed DB StatefulSet, or verify external connection |
-| Phase: Failed | Reconciliation error | Check operator logs for stack traces |
+| Phase: Failed | Invalid spec or reconciliation error | Check `kubectl describe eddi` for Events; check operator logs |
 | No URL in status | No Route/Ingress | Verify exposure.type and host settings |
 | Pods not starting | Image pull error | Check image repository, tag, and pullSecrets |
+| SecurityContext error | PSA enforcement | Ensure cluster PSA mode allows `restricted` profile |

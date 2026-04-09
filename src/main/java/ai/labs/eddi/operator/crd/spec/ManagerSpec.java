@@ -5,7 +5,7 @@ package ai.labs.eddi.operator.crd.spec;
  */
 public class ManagerSpec {
 
-    private boolean enabled = true;
+    private boolean enabled = false;
     private ImageSpec image = new ImageSpec();
     private ResourcesSpec resources = new ResourcesSpec("50m", "64Mi", "250m", "256Mi");
 

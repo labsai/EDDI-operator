@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.messaging;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
@@ -29,16 +30,10 @@ public class NatsStatefulSetDR extends CRUDKubernetesDependentResource<StatefulS
         var managed = spec.getMessaging().getManaged();
         var name = Labels.resourceName(eddi, "nats");
 
-        var resources = new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(managed.getResources().getRequests().getCpu()),
-                        "memory", new Quantity(managed.getResources().getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(managed.getResources().getLimits().getCpu()),
-                        "memory", new Quantity(managed.getResources().getLimits().getMemory())
-                ))
-                .build();
+        var resources = Defaults.buildResources(managed.getResources());
+
+        var imgSpec = managed.getImage();
+        var image = Defaults.resolveImage(imgSpec.getRepository(), imgSpec.getTag());
 
         var storageSize = managed.getStorage().getSize();
         var storageClassName = managed.getStorage().getStorageClassName();
@@ -79,7 +74,7 @@ public class NatsStatefulSetDR extends CRUDKubernetesDependentResource<StatefulS
                         .withNewSpec()
                             .addNewContainer()
                                 .withName("nats")
-                                .withImage("nats:2.10-alpine")
+                                .withImage(image)
                                 .withArgs(List.of("--jetstream", "--store_dir=/data"))
                                 .withPorts(List.of(
                                         new ContainerPortBuilder()
@@ -92,6 +87,7 @@ public class NatsStatefulSetDR extends CRUDKubernetesDependentResource<StatefulS
                                                 .build()
                                 ))
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .addNewVolumeMount()
                                     .withName("data")
                                     .withMountPath("/data")
@@ -104,6 +100,15 @@ public class NatsStatefulSetDR extends CRUDKubernetesDependentResource<StatefulS
                                     .withInitialDelaySeconds(5)
                                     .withPeriodSeconds(10)
                                 .endReadinessProbe()
+                                .withNewLivenessProbe()
+                                    .withNewHttpGet()
+                                        .withPath("/healthz")
+                                        .withPort(new IntOrString(8222))
+                                    .endHttpGet()
+                                    .withInitialDelaySeconds(15)
+                                    .withPeriodSeconds(15)
+                                    .withFailureThreshold(3)
+                                .endLivenessProbe()
                             .endContainer()
                         .endSpec()
                     .endTemplate()

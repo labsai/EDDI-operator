@@ -1,13 +1,7 @@
 ####
 # Dockerfile.native — EDDI Operator (GraalVM native mode)
-# Multi-stage build: Mandrel builder + UBI 9 minimal runtime
+# Assumes native binary is pre-built by Maven; this image is runtime-only.
 ####
-
-# Stage 1: Build native binary
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4 AS build
-RUN microdnf install -y gcc glibc-devel zlib-devel && microdnf clean all
-
-# Stage 2: Runtime
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
 
 # Red Hat certification labels

@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.datastore;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
@@ -30,16 +31,13 @@ public class PostgresStatefulSetDR extends CRUDKubernetesDependentResource<State
         var name = Labels.resourceName(eddi, "postgres");
         var credentialSecretName = Labels.resourceName(eddi, "postgres-credentials");
 
-        var resources = new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(managed.getResources().getRequests().getCpu()),
-                        "memory", new Quantity(managed.getResources().getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(managed.getResources().getLimits().getCpu()),
-                        "memory", new Quantity(managed.getResources().getLimits().getMemory())
-                ))
-                .build();
+        var resources = Defaults.buildResources(managed.getResources());
+
+        var imgSpec = managed.getImage();
+        var image = Defaults.resolveImage(
+                (imgSpec.getRepository() == null || imgSpec.getRepository().isBlank()) ? "postgres" : imgSpec.getRepository(),
+                (imgSpec.getTag() == null || imgSpec.getTag().isBlank()) ? "16-alpine" : imgSpec.getTag()
+        );
 
         var storageSize = managed.getStorage().getSize();
         var storageClassName = managed.getStorage().getStorageClassName();
@@ -80,7 +78,7 @@ public class PostgresStatefulSetDR extends CRUDKubernetesDependentResource<State
                         .withNewSpec()
                             .addNewContainer()
                                 .withName("postgres")
-                                .withImage("postgres:16")
+                                .withImage(image)
                                 .withPorts(List.of(
                                         new ContainerPortBuilder()
                                                 .withName("postgres")
@@ -88,6 +86,7 @@ public class PostgresStatefulSetDR extends CRUDKubernetesDependentResource<State
                                                 .build()
                                 ))
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .withEnv(List.of(
                                         new EnvVarBuilder()
                                                 .withName("POSTGRES_DB")
@@ -127,6 +126,14 @@ public class PostgresStatefulSetDR extends CRUDKubernetesDependentResource<State
                                     .withInitialDelaySeconds(10)
                                     .withPeriodSeconds(10)
                                 .endReadinessProbe()
+                                .withNewLivenessProbe()
+                                    .withNewExec()
+                                        .withCommand("pg_isready", "-U", "eddi")
+                                    .endExec()
+                                    .withInitialDelaySeconds(30)
+                                    .withPeriodSeconds(15)
+                                    .withFailureThreshold(3)
+                                .endLivenessProbe()
                             .endContainer()
                         .endSpec()
                     .endTemplate()

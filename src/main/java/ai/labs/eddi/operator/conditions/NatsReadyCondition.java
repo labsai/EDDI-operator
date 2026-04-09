@@ -7,6 +7,8 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 
+import org.jboss.logging.Logger;
+
 /**
  * ReadyPostcondition for the NATS StatefulSet.
  * Returns true when managed NATS has at least one ready replica,
@@ -14,6 +16,8 @@ import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
  * Has no-arg constructor for JOSDK reflection compatibility.
  */
 public class NatsReadyCondition implements Condition<HasMetadata, EddiResource> {
+
+    private static final Logger LOG = Logger.getLogger(NatsReadyCondition.class);
 
     @Override
     public boolean isMet(DependentResource<HasMetadata, EddiResource> dependentResource,
@@ -36,6 +40,7 @@ public class NatsReadyCondition implements Condition<HasMetadata, EddiResource> 
                     && sts.getStatus().getReadyReplicas() != null
                     && sts.getStatus().getReadyReplicas() > 0;
         } catch (Exception e) {
+            LOG.debugf(e, "NATS StatefulSet '%s' not available yet", stsName);
             return false;
         }
     }

@@ -11,13 +11,15 @@ A modern, **Red Hat-certifiable** Kubernetes Operator for the [EDDI v6](https://
 - **Multi-database support** — MongoDB or PostgreSQL (managed or external)
 - **NATS JetStream messaging** — Optional managed or external messaging
 - **Keycloak authentication** — Optional managed or external OIDC (dev/production modes)
+- **Auto-generated secrets** — Keycloak admin, PostgreSQL, and Vault credentials auto-generated on first deploy
 - **OpenShift & Kubernetes** — Auto-detects Route (OpenShift) or Ingress (K8s)
 - **Manager UI** — Optional EDDI configuration UI deployment
 - **Observability** — ServiceMonitor, Grafana Dashboard, PrometheusRule
 - **Autoscaling** — HPA with CPU/memory targets
-- **Backup & Restore** — CronJob-based database backup to PVC or S3
 - **Pod Disruption Budgets** — Safe rolling updates
 - **Network Policies** — Namespace-scoped traffic restrictions
+- **Configurable images** — Override all infrastructure images for air-gapped / enterprise registries
+- **CRD validation** — Invalid spec values produce clear `Failed` phase with error message
 
 ---
 
@@ -59,6 +61,9 @@ spec:
     type: postgres
     managed:
       enabled: true
+      image:
+        repository: my-registry.example.com/postgres
+        tag: "16-alpine"
       storage:
         size: 50Gi
         storageClassName: gp3
@@ -102,7 +107,7 @@ spec:
 
 ### Architecture
 
-The operator uses the **Dependent Resource** pattern from the Java Operator SDK. A single `EddiReconciler` declaratively manages 20+ Kubernetes resources through a `@Workflow` annotation:
+The operator uses the **Dependent Resource** pattern from the Java Operator SDK. A single `EddiReconciler` declaratively manages 26 Kubernetes resources through a `@Workflow` annotation:
 
 ```
 Eddi CR
@@ -117,6 +122,7 @@ Eddi CR
        ├─ PostgresServiceDR         (when datastore.type=postgres + managed)
        ├─ NatsStatefulSetDR         (when messaging.type=nats + managed)
        ├─ NatsServiceDR             (when messaging.type=nats + managed)
+       ├─ KeycloakSecretDR          (when auth.enabled + managed + no adminSecretRef)
        ├─ KeycloakDeploymentDR      (when auth.enabled + managed)
        ├─ KeycloakServiceDR         (when auth.enabled + managed)
        ├─ EddiDeploymentDR          (after infra ready)
@@ -127,20 +133,25 @@ Eddi CR
        ├─ ManagerServiceDR          (when manager.enabled)
        ├─ HpaDR                     (when autoscaling.enabled)
        ├─ PdbDR                     (when podDisruptionBudget.enabled)
-       └─ NetworkPolicyDR           (when networkPolicy=true)
+       ├─ NetworkPolicyDR           (when networkPolicy=true)
+       ├─ ServiceMonitorDR          (when monitoring.serviceMonitor.enabled)
+       ├─ GrafanaDashboardDR        (when monitoring.grafanaDashboard.enabled)
+       └─ PrometheusRuleDR          (when monitoring.alerts.enabled)
 ```
 
 ### Reconciliation Flow
 
-1. **Activation Conditions** — Each optional resource has a condition class that checks the `EddiSpec` to decide if the resource should be created. Conditions use `HasMetadata` generics for type-safe sharing across resource types (StatefulSet, Service, Secret).
+1. **Spec Validation** — Before any resources are created, the reconciler validates enum fields (`datastore.type`, `messaging.type`, `exposure.type`) and constraints (`replicas >= 1`). Invalid specs produce a `Failed` phase with a clear error message.
 
-2. **Dependency Ordering** — The `@Workflow` annotation's `dependsOn` parameter ensures correct ordering:
+2. **Activation Conditions** — Each optional resource has a condition class that checks the `EddiSpec` to decide if the resource should be created. Conditions use `HasMetadata` generics for type-safe sharing across resource types (StatefulSet, Service, Secret).
+
+3. **Dependency Ordering** — The `@Workflow` annotation's `dependsOn` parameter ensures correct ordering:
    - Infrastructure (MongoDB/PostgreSQL/NATS) deploys first
    - `readyPostcondition` on StatefulSets ensures infrastructure is ready before EDDI starts
    - EDDI Deployment waits for ConfigMap + VaultSecret + all infrastructure services
    - Ingress/Route deploy after EDDI Service
 
-3. **Status Computation** — After each reconciliation:
+4. **Status Computation** — After each reconciliation:
    - `StatusUpdater` queries child resource states via the K8s API
    - Computes 5 conditions: `Available`, `DatastoreReady`, `MessagingReady`, `Progressing`, `Degraded`
    - `lastTransitionTime` is preserved when condition status hasn't changed (Kubernetes convention)
@@ -148,9 +159,20 @@ Eddi CR
    - Resolves the external URL from Route or Ingress
    - Computes phase: `Pending` → `Deploying` → `Running` (or `Failed`)
 
-4. **Config Rollouts** — The ConfigMap data is SHA-256 hashed and injected as a pod annotation (`eddi.labs.ai/config-hash`). When config changes, the hash changes, forcing a Deployment rollout.
+5. **Config Rollouts** — The ConfigMap data is SHA-256 hashed and injected as a pod annotation (`eddi.labs.ai/config-hash`). When config changes, the hash changes, forcing a Deployment rollout.
 
-5. **Secret Management** — Secrets (Vault master key, PostgreSQL credentials) are auto-generated on first deployment and **preserved on subsequent reconciliations** to prevent data loss. The operator uses direct K8s client lookups (not `getSecondaryResource()`) to avoid ambiguity when multiple Secret DRs exist.
+6. **Secret Management** — Secrets (Vault master key, PostgreSQL credentials, Keycloak admin) are auto-generated on first deployment and **preserved on subsequent reconciliations** to prevent data loss. The operator uses direct K8s client lookups (not `getSecondaryResource()`) to avoid ambiguity when multiple Secret DRs exist.
+
+### Liveness & Readiness
+
+All infrastructure components have both readiness and liveness probes:
+
+| Component | Readiness | Liveness |
+|-----------|-----------|----------|
+| MongoDB | `mongosh --eval db.adminCommand('ping')` | Same (30s delay) |
+| PostgreSQL | `pg_isready -U eddi` | Same (30s delay) |
+| NATS | HTTP `/healthz:8222` | Same (15s delay) |
+| Keycloak | HTTP `/health/ready:8080` | HTTP `/health/live:8080` (60s delay) |
 
 ### OpenShift Detection
 
@@ -166,19 +188,19 @@ ai.labs.eddi.operator
 │   ├── EddiResource.java    # Root CRD (eddi.labs.ai/v1beta1)
 │   ├── EddiSpec.java        # Spec with all sub-specs
 │   ├── EddiStatus.java      # Status subresource
-│   └── spec/                # Sub-spec classes (14 files)
+│   └── spec/                # Sub-spec classes (15 files)
 ├── reconciler/
 │   ├── EddiReconciler.java  # Main reconciler with @Workflow
 │   └── StatusUpdater.java   # Status computation
 ├── dependent/
 │   ├── core/                # Always-active DRs (5 files)
-│   ├── datastore/           # MongoDB + PostgreSQL DRs (5 files)
+│   ├── datastore/           # MongoDB + PostgreSQL DRs (6 files)
 │   ├── messaging/           # NATS DRs (2 files)
-│   ├── auth/                # Keycloak DRs (2 files)
+│   ├── auth/                # Keycloak DRs (3 files)
 │   ├── exposure/            # Ingress + Route DRs (2 files)
 │   ├── extras/              # Manager, HPA, PDB, NetworkPolicy (5 files)
 │   └── monitoring/          # ServiceMonitor, PrometheusRule, Grafana (4 files)
-├── conditions/              # Activation + Ready conditions (16 files)
+├── conditions/              # Activation + Ready conditions (19 files)
 └── util/                    # Labels, Hashing, Defaults (3 files)
 ```
 
@@ -198,16 +220,22 @@ ai.labs.eddi.operator
 | `image.pullSecrets` | list | `[]` | Image pull secret names |
 | `datastore.type` | string | `"mongodb"` | `"mongodb"` or `"postgres"` |
 | `datastore.managed.enabled` | bool | `true` | Deploy managed database |
+| `datastore.managed.image.repository` | string | `""` | Image override (default: `mongo` or `postgres`) |
+| `datastore.managed.image.tag` | string | `""` | Tag override (default: `7.0` or `16-alpine`) |
 | `datastore.managed.storage.size` | string | `"20Gi"` | PVC storage size |
-| `datastore.managed.storage.storageClassName` | string | `""` | StorageClass (default = cluster default) |
+| `datastore.managed.storage.storageClassName` | string | `""` | StorageClass (cluster default) |
 | `datastore.external.connectionString` | string | `""` | External MongoDB connection string |
 | `datastore.external.secretRef` | string | `""` | Secret with external DB credentials |
 | `messaging.type` | string | `"in-memory"` | `"in-memory"` or `"nats"` |
 | `messaging.managed.enabled` | bool | `true` | Deploy managed NATS |
+| `messaging.managed.image.repository` | string | `"nats"` | NATS image repository |
+| `messaging.managed.image.tag` | string | `"2.10-alpine"` | NATS image tag |
 | `auth.enabled` | bool | `false` | Enable OIDC authentication |
 | `auth.managed.enabled` | bool | `false` | Deploy managed Keycloak |
 | `auth.managed.mode` | string | `"dev"` | `"dev"` (start-dev) or `"production"` (start) |
-| `auth.managed.adminSecretRef` | string | `""` | Secret with Keycloak admin password |
+| `auth.managed.adminSecretRef` | string | `""` | Secret with Keycloak admin password (auto-generated if empty) |
+| `auth.managed.image.repository` | string | `"quay.io/keycloak/keycloak"` | Keycloak image |
+| `auth.managed.image.tag` | string | `"26.0"` | Keycloak version |
 | `auth.external.authServerUrl` | string | `""` | External OIDC auth server URL |
 | `auth.external.clientId` | string | `"eddi-backend"` | OIDC client ID |
 | `exposure.type` | string | `"auto"` | `"auto"`, `"route"`, `"ingress"`, or `"none"` |
@@ -216,7 +244,7 @@ ai.labs.eddi.operator
 | `exposure.tls.secretRef` | string | `""` | TLS certificate secret |
 | `exposure.ingressClassName` | string | `""` | Ingress class name |
 | `exposure.annotations` | map | `{}` | Route/Ingress annotations |
-| `manager.enabled` | bool | `true` | Deploy EDDI Manager UI |
+| `manager.enabled` | bool | `false` | Deploy EDDI Manager UI |
 | `monitoring.serviceMonitor.enabled` | bool | `false` | Create ServiceMonitor |
 | `monitoring.grafanaDashboard.enabled` | bool | `false` | Create Grafana Dashboard ConfigMap |
 | `monitoring.alerts.enabled` | bool | `false` | Create PrometheusRule |
@@ -262,23 +290,42 @@ ai.labs.eddi.operator
 
 ```bash
 # Compile
-./mvnw compile
+mvn compile
 
 # Run tests
-./mvnw test
+mvn test
 
 # Package (JVM)
-./mvnw package
+mvn package
 
 # Build native image
-./mvnw package -Pnative
+mvn package -Pnative
 
 # Build Docker image (JVM)
-docker build -f Dockerfile.jvm -t eddi-operator:latest .
+docker build -f Dockerfile.jvm -t eddi-operator:6.0.0 .
 
 # Build Docker image (Native)
-docker build -f Dockerfile.native -t eddi-operator:latest-native .
+docker build -f Dockerfile.native -t eddi-operator:6.0.0-native .
 ```
+
+## Testing
+
+```bash
+# Unit tests (62 tests)
+mvn test
+
+# Integration tests (requires Quarkus test server)
+mvn verify -Pit
+```
+
+| Test Suite | Tests | Coverage Area |
+|-----------|-------|---------------|
+| `ConditionTests` | 10 | Activation conditions, `Defaults.*` utilities |
+| `ConfigMapDRTest` | 8 | ConfigMap data generation for all datastore/messaging combos |
+| `EddiDeploymentDRTest` | 11 | Deployment DR helpers, image resolution |
+| `UtilTests` | 7 | Labels, Hashing |
+| `ValidationAndSecurityTests` | 26 | Spec validation, image resolution, Keycloak secret gen, conditions |
+| `EddiReconcilerIT` | 10 | Full reconciler integration (mock K8s server) |
 
 ## Documentation
 

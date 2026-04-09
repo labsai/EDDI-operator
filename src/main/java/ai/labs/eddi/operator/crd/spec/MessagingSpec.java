@@ -37,6 +37,7 @@ public class MessagingSpec {
 
     public static class ManagedMessagingSpec {
         private boolean enabled = true;
+        private ComponentImageSpec image = new ComponentImageSpec("nats", "2.10-alpine");
         private ManagedDatabaseSpec.StorageSpec storage = new ManagedDatabaseSpec.StorageSpec("5Gi", "");
         private ResourcesSpec resources = new ResourcesSpec("50m", "64Mi", "500m", "256Mi");
 
@@ -46,6 +47,14 @@ public class MessagingSpec {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public ComponentImageSpec getImage() {
+            return image;
+        }
+
+        public void setImage(ComponentImageSpec image) {
+            this.image = image;
         }
 
         public ManagedDatabaseSpec.StorageSpec getStorage() {

@@ -11,6 +11,8 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 
+import org.jboss.logging.Logger;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +24,8 @@ import java.util.Map;
  */
 @KubernetesDependent
 public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment, EddiResource> {
+
+    private static final Logger LOG = Logger.getLogger(EddiDeploymentDR.class);
 
     public EddiDeploymentDR() {
         super(Deployment.class);
@@ -85,7 +89,7 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
         }
 
         // Resource requirements
-        var resources = buildResources(spec.getResources());
+        var resources = Defaults.buildResources(spec.getResources());
 
         return new DeploymentBuilder()
                 .withNewMetadata()
@@ -127,6 +131,7 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
                                 .withEnvFrom(envFrom)
                                 .withEnv(env)
                                 .withResources(resources)
+                                .withSecurityContext(Defaults.restrictedSecurityContext())
                                 .withNewReadinessProbe()
                                     .withNewHttpGet()
                                         .withPath("/q/health/ready")
@@ -178,7 +183,7 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
                 return ai.labs.eddi.operator.util.Hashing.hash(configMap.getData());
             }
         } catch (Exception e) {
-            // ConfigMap not available yet
+            LOG.debugf(e, "ConfigMap '%s' not available yet, computing hash from spec", configMapName);
         }
         // Fallback: compute from spec
         var data = ConfigMapDR.buildConfigData(eddi.getSpec(), eddi.getMetadata().getName());
@@ -195,19 +200,6 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
                         .withOptional(true)
                     .endSecretKeyRef()
                 .endValueFrom()
-                .build();
-    }
-
-    private io.fabric8.kubernetes.api.model.ResourceRequirements buildResources(ResourcesSpec spec) {
-        return new ResourceRequirementsBuilder()
-                .withRequests(Map.of(
-                        "cpu", new Quantity(spec.getRequests().getCpu()),
-                        "memory", new Quantity(spec.getRequests().getMemory())
-                ))
-                .withLimits(Map.of(
-                        "cpu", new Quantity(spec.getLimits().getCpu()),
-                        "memory", new Quantity(spec.getLimits().getMemory())
-                ))
                 .build();
     }
 }
