@@ -51,6 +51,7 @@ public class NatsStatefulSetDR extends CRUDKubernetesDependentResource<StatefulS
         var pvc = new PersistentVolumeClaimBuilder()
                 .withNewMetadata()
                     .withName("data")
+                    .withLabels(Labels.standard(eddi, "nats"))
                 .endMetadata()
                 .withSpec(pvcSpecBuilder.build())
                 .build();

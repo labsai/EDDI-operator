@@ -11,8 +11,10 @@ import ai.labs.eddi.operator.dependent.auth.*;
 import ai.labs.eddi.operator.dependent.exposure.*;
 import ai.labs.eddi.operator.dependent.extras.*;
 import ai.labs.eddi.operator.dependent.monitoring.*;
+import ai.labs.eddi.operator.dependent.lifecycle.*;
 
 import ai.labs.eddi.operator.conditions.*;
+import ai.labs.eddi.operator.util.Labels;
 
 import io.fabric8.kubernetes.api.model.EventBuilder;
 import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * Main reconciler for the Eddi custom resource.
  * Uses the @Workflow annotation to declare all dependent resources and their relationships.
  *
- * The workflow manages 26 Kubernetes resources with activation conditions,
+ * The workflow manages 28 Kubernetes resources with activation conditions,
  * readiness postconditions, and correct deployment ordering.
  */
 @ControllerConfiguration(
@@ -202,6 +204,19 @@ import java.util.concurrent.TimeUnit;
                 type = PrometheusRuleDR.class,
                 activationCondition = AlertsActivationCondition.class,
                 dependsOn = {"eddi-deployment"}
+        ),
+
+        // ── Conditional: Backup ───────────────────────────
+        @Dependent(
+                name = "backup-pvc",
+                type = BackupPvcDR.class,
+                activationCondition = BackupPvcActivationCondition.class
+        ),
+        @Dependent(
+                name = "backup-cronjob",
+                type = BackupCronJobDR.class,
+                activationCondition = BackupActivationCondition.class,
+                dependsOn = {"eddi-deployment"}
         )
 })
 public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiResource> {
@@ -211,6 +226,13 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
     private static final Set<String> VALID_DATASTORE_TYPES = Set.of("mongodb", "postgres");
     private static final Set<String> VALID_MESSAGING_TYPES = Set.of("in-memory", "nats");
     private static final Set<String> VALID_EXPOSURE_TYPES = Set.of("auto", "route", "ingress", "none");
+    private static final Set<String> VALID_PVC_RETENTION = Set.of("Retain", "Delete");
+
+    /** Basic 5-field cron pattern: minute hour day-of-month month day-of-week. */
+    private static final java.util.regex.Pattern CRON_PATTERN =
+            java.util.regex.Pattern.compile(
+                    "^(\\S+\\s+){4}\\S+$"
+            );
 
     private final StatusUpdater statusUpdater;
 
@@ -271,9 +293,12 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
         emitEvent(eddi, context, "Normal", "CleanupStarted",
                 "EDDI custom resource deleted, cleaning up managed resources");
 
+        // If pvcRetentionPolicy is "Delete", clean up orphaned PVCs
+        if ("Delete".equals(eddi.getSpec().getPvcRetentionPolicy())) {
+            cleanupPvcs(eddi, context);
+        }
+
         // JOSDK will garbage-collect all owner-referenced child resources.
-        // This method exists for logging, event recording, and future cleanup of
-        // external resources (e.g., cloud-hosted DB connections).
         return DeleteControl.defaultDelete();
     }
 
@@ -323,6 +348,33 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
             return "spec.replicas must be >= 1, got: " + spec.getReplicas();
         }
 
+        var pvcPolicy = spec.getPvcRetentionPolicy();
+        if (pvcPolicy != null && !VALID_PVC_RETENTION.contains(pvcPolicy)) {
+            return "Invalid spec.pvcRetentionPolicy: '" + pvcPolicy
+                    + "'. Must be one of: " + VALID_PVC_RETENTION;
+        }
+
+        // Validate backup spec
+        if (spec.getBackup().isEnabled()) {
+            var schedule = spec.getBackup().getSchedule();
+            if (schedule == null || schedule.isBlank() || !CRON_PATTERN.matcher(schedule.trim()).matches()) {
+                return "Invalid spec.backup.schedule: '" + schedule
+                        + "'. Must be a 5-field cron expression (e.g., '0 2 * * *')";
+            }
+
+            var backupStorage = spec.getBackup().getStorage();
+            if (!"pvc".equals(backupStorage.getType()) && !"s3".equals(backupStorage.getType())) {
+                return "Invalid spec.backup.storage.type: '" + backupStorage.getType()
+                        + "'. Must be one of: [pvc, s3]";
+            }
+            if ("s3".equals(backupStorage.getType())) {
+                var s3 = backupStorage.getS3();
+                if (s3.getBucket() == null || s3.getBucket().isBlank()) {
+                    return "spec.backup.storage.s3.bucket is required when storage.type=s3";
+                }
+            }
+        }
+
         return null; // valid
     }
 
@@ -363,6 +415,50 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
         } catch (Exception e) {
             LOG.debugf(e, "Failed to emit event '%s' for Eddi '%s'",
                     reason, eddi.getMetadata().getName());
+        }
+    }
+
+    /**
+     * Deletes orphaned PVCs left by StatefulSets when pvcRetentionPolicy is "Delete".
+     * StatefulSet PVCs are not garbage-collected by owner references.
+     * Uses label matching (for new PVCs) and name-prefix matching (for pre-existing PVCs).
+     */
+    private void cleanupPvcs(EddiResource eddi, Context<EddiResource> context) {
+        var namespace = eddi.getMetadata().getNamespace();
+        var instanceName = eddi.getMetadata().getName();
+        try {
+            // StatefulSet PVCs follow the naming pattern: data-<statefulset-name>-<ordinal>
+            // StatefulSet names are: <instance>-mongodb, <instance>-postgres, <instance>-nats
+            var pvcPrefixes = List.of(
+                    "data-" + instanceName + "-mongodb-",
+                    "data-" + instanceName + "-postgres-",
+                    "data-" + instanceName + "-nats-"
+            );
+
+            var allPvcs = context.getClient().persistentVolumeClaims()
+                    .inNamespace(namespace)
+                    .list();
+
+            for (var pvc : allPvcs.getItems()) {
+                var pvcName = pvc.getMetadata().getName();
+                var labels = pvc.getMetadata().getLabels();
+
+                // Match either by operator labels or by StatefulSet naming convention
+                boolean matchesByLabel = labels != null
+                        && instanceName.equals(labels.get("app.kubernetes.io/instance"))
+                        && "eddi-operator".equals(labels.get("app.kubernetes.io/managed-by"));
+                boolean matchesByName = pvcPrefixes.stream().anyMatch(pvcName::startsWith);
+
+                if (matchesByLabel || matchesByName) {
+                    LOG.infof("Deleting PVC '%s' (pvcRetentionPolicy=Delete)", pvcName);
+                    context.getClient().persistentVolumeClaims()
+                            .inNamespace(namespace)
+                            .withName(pvcName)
+                            .delete();
+                }
+            }
+        } catch (Exception e) {
+            LOG.warnf(e, "Failed to clean up PVCs for Eddi '%s'", instanceName);
         }
     }
 }

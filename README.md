@@ -20,6 +20,11 @@ A modern, **Red Hat-certifiable** Kubernetes Operator for the [EDDI v6](https://
 - **Network Policies** — Namespace-scoped traffic restrictions
 - **Configurable images** — Override all infrastructure images for air-gapped / enterprise registries
 - **CRD validation** — Invalid spec values produce clear `Failed` phase with error message
+- **Backup & Restore** — CronJob-based database backup to PVC or S3 with retention
+- **Pod Scheduling** — nodeSelector, tolerations, affinity, topologySpreadConstraints
+- **Custom Labels/Annotations** — Pod-level labels and annotations for service meshes, cost allocation
+- **PVC Cleanup** — Configurable retention policy (`Retain` or `Delete`) on CR deletion
+- **Upgrade Detection** — Automatic `Upgrading` phase when `spec.version` changes
 
 ---
 
@@ -136,7 +141,9 @@ Eddi CR
        ├─ NetworkPolicyDR           (when networkPolicy=true)
        ├─ ServiceMonitorDR          (when monitoring.serviceMonitor.enabled)
        ├─ GrafanaDashboardDR        (when monitoring.grafanaDashboard.enabled)
-       └─ PrometheusRuleDR          (when monitoring.alerts.enabled)
+       ├─ PrometheusRuleDR          (when monitoring.alerts.enabled)
+       ├─ BackupPvcDR               (when backup.enabled + storage.type=pvc)
+       └─ BackupCronJobDR           (when backup.enabled)
 ```
 
 ### Reconciliation Flow
@@ -257,6 +264,20 @@ ai.labs.eddi.operator
 | `podDisruptionBudget.minAvailable` | int | `1` | Minimum available pods |
 | `networkPolicy` | bool | `false` | Create NetworkPolicy |
 | `vault.masterKeySecretRef` | string | `""` | External vault key secret (auto-generated if empty) |
+| `scheduling.nodeSelector` | map | `{}` | Node label selector for pod placement |
+| `scheduling.tolerations` | list | `[]` | Tolerations for tainted nodes |
+| `scheduling.affinity` | object | `null` | Affinity/anti-affinity rules |
+| `scheduling.topologySpreadConstraints` | list | `[]` | Zone-awareness constraints |
+| `podLabels` | map | `{}` | Additional labels applied to EDDI server pods |
+| `podAnnotations` | map | `{}` | Additional annotations (e.g., `sidecar.istio.io/inject`) |
+| `pvcRetentionPolicy` | string | `"Retain"` | PVC cleanup on CR deletion: `Retain` or `Delete` |
+| `backup.enabled` | bool | `false` | Enable scheduled database backups |
+| `backup.schedule` | string | `"0 2 * * *"` | Backup cron schedule |
+| `backup.retentionDays` | int | `7` | Delete backups older than N days |
+| `backup.storage.type` | string | `"pvc"` | Backup target: `pvc` or `s3` |
+| `backup.storage.pvc.size` | string | `"50Gi"` | Backup PVC size |
+| `backup.storage.s3.bucket` | string | `""` | S3 bucket name |
+| `backup.storage.s3.secretRef` | string | `""` | Secret with S3 access/secret keys |
 | `resources.requests.cpu` | string | `"250m"` | EDDI CPU request |
 | `resources.requests.memory` | string | `"384Mi"` | EDDI memory request |
 | `resources.limits.cpu` | string | `"2"` | EDDI CPU limit |
@@ -311,7 +332,7 @@ docker build -f Dockerfile.native -t eddi-operator:6.0.0-native .
 ## Testing
 
 ```bash
-# Unit tests (62 tests)
+# Unit tests (85+ tests)
 mvn test
 
 # Integration tests (requires Quarkus test server)
@@ -325,11 +346,13 @@ mvn verify -Pit
 | `EddiDeploymentDRTest` | 11 | Deployment DR helpers, image resolution |
 | `UtilTests` | 7 | Labels, Hashing |
 | `ValidationAndSecurityTests` | 26 | Spec validation, image resolution, Keycloak secret gen, conditions |
+| `EnterpriseHardeningTests` | 23 | Scheduling, labels, PVC retention, backup validation/conditions |
 | `EddiReconcilerIT` | 10 | Full reconciler integration (mock K8s server) |
 
 ## Documentation
 
 - [User Guide](docs/user-guide.md)
+- [RBAC & Multi-Tenancy](docs/rbac.md)
 - [Operator Plan](docs/OPERATOR_V2_PLAN.md)
 
 ## License

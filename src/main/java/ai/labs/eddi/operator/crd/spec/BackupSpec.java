@@ -1,13 +1,18 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import ai.labs.eddi.operator.crd.spec.ComponentImageSpec;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Backup and restore configuration.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BackupSpec {
 
     private boolean enabled = false;
     private String schedule = "0 2 * * *"; // Daily at 02:00
     private int retentionDays = 7;
+    private ComponentImageSpec image = new ComponentImageSpec();
     private BackupStorageSpec storage = new BackupStorageSpec();
 
     public boolean isEnabled() {
@@ -42,6 +47,15 @@ public class BackupSpec {
         this.storage = storage;
     }
 
+    public ComponentImageSpec getImage() {
+        return image;
+    }
+
+    public void setImage(ComponentImageSpec image) {
+        this.image = image;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class BackupStorageSpec {
         private String type = "pvc"; // "pvc" | "s3"
         private PvcBackupSpec pvc = new PvcBackupSpec();
@@ -72,6 +86,7 @@ public class BackupSpec {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PvcBackupSpec {
         private String size = "50Gi";
         private String storageClassName = "";
@@ -93,6 +108,7 @@ public class BackupSpec {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class S3BackupSpec {
         private String bucket = "";
         private String region = "";

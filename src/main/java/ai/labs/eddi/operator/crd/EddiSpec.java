@@ -4,6 +4,9 @@ import ai.labs.eddi.operator.crd.spec.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 /**
  * Top-level spec for the Eddi custom resource.
  */
@@ -49,8 +52,20 @@ public class EddiSpec {
     @JsonPropertyDescription("EDDI server resource requests and limits")
     private ResourcesSpec resources = new ResourcesSpec();
 
-    // NOTE: BackupSpec is planned for Phase 3 (Full Lifecycle) and is not yet implemented.
-    // It will be added back to the CRD when BackupCronJobDR is ready.
+    @JsonPropertyDescription("Backup and restore configuration")
+    private BackupSpec backup = new BackupSpec();
+
+    @JsonPropertyDescription("Pod scheduling constraints (nodeSelector, tolerations, affinity, topologySpreadConstraints)")
+    private SchedulingSpec scheduling = new SchedulingSpec();
+
+    @JsonPropertyDescription("Additional labels applied to EDDI server pods")
+    private Map<String, String> podLabels = new LinkedHashMap<>();
+
+    @JsonPropertyDescription("Additional annotations applied to EDDI server pods (e.g., for service mesh sidecar injection)")
+    private Map<String, String> podAnnotations = new LinkedHashMap<>();
+
+    @JsonPropertyDescription("PVC retention policy on CR deletion: Retain (default) or Delete")
+    private String pvcRetentionPolicy = "Retain";
 
     @JsonPropertyDescription("CORS allowed origins")
     private String cors = "http://localhost:3000,http://localhost:7070";
@@ -162,6 +177,46 @@ public class EddiSpec {
 
     public void setResources(ResourcesSpec resources) {
         this.resources = resources;
+    }
+
+    public BackupSpec getBackup() {
+        return backup;
+    }
+
+    public void setBackup(BackupSpec backup) {
+        this.backup = backup;
+    }
+
+    public SchedulingSpec getScheduling() {
+        return scheduling;
+    }
+
+    public void setScheduling(SchedulingSpec scheduling) {
+        this.scheduling = scheduling;
+    }
+
+    public Map<String, String> getPodLabels() {
+        return podLabels;
+    }
+
+    public void setPodLabels(Map<String, String> podLabels) {
+        this.podLabels = podLabels;
+    }
+
+    public Map<String, String> getPodAnnotations() {
+        return podAnnotations;
+    }
+
+    public void setPodAnnotations(Map<String, String> podAnnotations) {
+        this.podAnnotations = podAnnotations;
+    }
+
+    public String getPvcRetentionPolicy() {
+        return pvcRetentionPolicy;
+    }
+
+    public void setPvcRetentionPolicy(String pvcRetentionPolicy) {
+        this.pvcRetentionPolicy = pvcRetentionPolicy;
     }
 
     public String getCors() {

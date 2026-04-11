@@ -40,6 +40,10 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
 
         // Pod annotations — include config hash for rollout on config change
         var annotations = new LinkedHashMap<String, String>();
+        // Merge user-provided pod annotations first, then operator annotations
+        if (spec.getPodAnnotations() != null) {
+            annotations.putAll(spec.getPodAnnotations());
+        }
         annotations.put("eddi.labs.ai/config-hash", computeConfigHash(eddi, context));
 
         // Environment variables from ConfigMap
@@ -111,12 +115,16 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
                     .endStrategy()
                     .withNewTemplate()
                         .withNewMetadata()
-                            .withLabels(Labels.standard(eddi, "server"))
+                            .withLabels(mergedPodLabels(eddi))
                             .withAnnotations(annotations)
                         .endMetadata()
                         .withNewSpec()
                             .withServiceAccountName(Labels.resourceName(eddi, "server"))
                             .withImagePullSecrets(pullSecrets)
+                            .withNodeSelector(nullIfEmpty(spec.getScheduling().getNodeSelector()))
+                            .withTolerations(nullIfEmptyList(spec.getScheduling().getTolerations()))
+                            .withAffinity(spec.getScheduling().getAffinity())
+                            .withTopologySpreadConstraints(nullIfEmptyList(spec.getScheduling().getTopologySpreadConstraints()))
                             .addNewContainer()
                                 .withName("eddi")
                                 .withImage(Defaults.resolveEddiImage(spec))
@@ -201,5 +209,32 @@ public class EddiDeploymentDR extends CRUDKubernetesDependentResource<Deployment
                     .endSecretKeyRef()
                 .endValueFrom()
                 .build();
+    }
+
+    /**
+     * Merges standard labels with user-specified podLabels.
+     * User labels are added first so operator labels take precedence.
+     */
+    private Map<String, String> mergedPodLabels(EddiResource eddi) {
+        var labels = new LinkedHashMap<String, String>();
+        if (eddi.getSpec().getPodLabels() != null) {
+            labels.putAll(eddi.getSpec().getPodLabels());
+        }
+        labels.putAll(Labels.standard(eddi, "server"));
+        return labels;
+    }
+
+    /**
+     * Returns null for empty maps so Fabric8 omits the field from the YAML.
+     */
+    private static <K, V> Map<K, V> nullIfEmpty(Map<K, V> map) {
+        return (map == null || map.isEmpty()) ? null : map;
+    }
+
+    /**
+     * Returns null for empty lists so Fabric8 omits the field from the YAML.
+     */
+    private static <T> List<T> nullIfEmptyList(List<T> list) {
+        return (list == null || list.isEmpty()) ? null : list;
     }
 }

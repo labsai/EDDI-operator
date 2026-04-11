@@ -32,16 +32,22 @@ First production release of the EDDI Kubernetes Operator for EDDI v6.
 - **Kubernetes Events** — Reconciliation lifecycle events visible via `kubectl describe`
 - **Drift Correction** — Automatic re-reconciliation every 5 minutes via `@MaxReconciliationInterval`
 - **Finalizer** — Graceful cleanup on CR deletion with event recording
+- **Backup & Restore** — CronJob-based database backup to PVC or S3 with configurable retention
+- **Pod Scheduling** — `nodeSelector`, `tolerations`, `affinity`, and `topologySpreadConstraints`
+- **Custom Pod Labels & Annotations** — For service mesh injection, cost allocation, and security scanning
+- **PVC Retention Policy** — Configurable `Retain` or `Delete` on CR deletion
+- **Upgrade Detection** — Automatic `Upgrading` phase when `spec.version` changes
+- **RBAC Documentation** — Minimum ClusterRole, namespace-scoped mode, multi-tenancy guide
 
 ### Architecture
 
 - Built on **Java 21**, **Quarkus 3.34.x**, **JOSDK 5.3.x**
-- 26 Dependent Resources managed declaratively via `@Workflow`
-- 19 Activation/Ready conditions for fine-grained resource control
+- 28 Dependent Resources managed declaratively via `@Workflow`
+- 21 Activation/Ready conditions for fine-grained resource control
 - Red Hat-certifiable with `@Plural`, securityContext, and UBI 9 base images
 
 ### Testing
 
-- 62+ unit tests covering conditions, DRs, validation, security, and utilities
+- 85+ unit tests covering conditions, DRs, validation, security, enterprise hardening, and utilities
 - Integration tests with `@QuarkusTest` + `MockKubernetesServer`
 - CI pipeline with unit tests, integration tests, JVM and native image builds, OLM bundle validation

@@ -37,6 +37,9 @@ public class StatusUpdater {
 
         // Fix #8: Set observedGeneration
         status.setObservedGeneration(eddi.getMetadata().getGeneration());
+
+        // Capture previous version before overwriting — needed for upgrade detection
+        var previousVersion = status.getVersion();
         status.setVersion(spec.getVersion());
         status.setReplicas(spec.getReplicas());
 
@@ -114,9 +117,16 @@ public class StatusUpdater {
 
         status.setConditions(conditions);
 
+        // Detect version upgrade (compare against the version from the *previous* reconcile)
+        boolean isUpgrading = previousVersion != null
+                && !spec.getVersion().equals(previousVersion)
+                && !"Pending".equals(status.getPhase());
+
         // Compute phase
         if (!dbReady || !msgReady) {
             status.setPhase("Pending");
+        } else if (isUpgrading && (isDeploying || readyReplicas < spec.getReplicas())) {
+            status.setPhase("Upgrading");
         } else if (isDeploying) {
             status.setPhase("Deploying");
         } else if (available && readyReplicas >= spec.getReplicas()) {

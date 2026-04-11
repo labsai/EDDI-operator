@@ -55,6 +55,7 @@ public class PostgresStatefulSetDR extends CRUDKubernetesDependentResource<State
         var pvc = new PersistentVolumeClaimBuilder()
                 .withNewMetadata()
                     .withName("data")
+                    .withLabels(Labels.standard(eddi, "postgres"))
                 .endMetadata()
                 .withSpec(pvcSpecBuilder.build())
                 .build();

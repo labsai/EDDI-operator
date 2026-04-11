@@ -55,6 +55,7 @@ public class MongoStatefulSetDR extends CRUDKubernetesDependentResource<Stateful
         var pvc = new PersistentVolumeClaimBuilder()
                 .withNewMetadata()
                     .withName("data")
+                    .withLabels(Labels.standard(eddi, "mongodb"))
                 .endMetadata()
                 .withSpec(pvcSpecBuilder.build())
                 .build();

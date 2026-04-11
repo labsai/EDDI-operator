@@ -7,14 +7,15 @@ import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.workflow.Condition;
 
 /**
- * Activates the BackupCronJobDR when spec.backup.enabled=true.
+ * Activates the BackupPvcDR when spec.backup.enabled=true and spec.backup.storage.type=pvc.
  */
-public class BackupActivationCondition implements Condition<HasMetadata, EddiResource> {
+public class BackupPvcActivationCondition implements Condition<HasMetadata, EddiResource> {
 
     @Override
     public boolean isMet(DependentResource<HasMetadata, EddiResource> dependentResource,
                           EddiResource eddi,
                           Context<EddiResource> context) {
-        return eddi.getSpec().getBackup().isEnabled();
+        var backup = eddi.getSpec().getBackup();
+        return backup.isEnabled() && "pvc".equals(backup.getStorage().getType());
     }
 }

@@ -6,6 +6,10 @@
 - [Installation](#installation)
 - [Configuration Reference](#configuration-reference)
 - [Deployment Examples](#deployment-examples)
+- [Pod Scheduling](#pod-scheduling)
+- [Backup & Restore](#backup--restore)
+- [Custom Labels & Annotations](#custom-labels--annotations)
+- [PVC Retention Policy](#pvc-retention-policy)
 - [Monitoring](#monitoring)
 - [Troubleshooting](#troubleshooting)
 
@@ -307,6 +311,129 @@ spec:
         repository: registry.internal.corp/nats
         tag: "2.10-alpine"
 ```
+
+---
+
+## Pod Scheduling
+
+For enterprise clusters with node taints, dedicated node pools, or multi-zone requirements:
+
+```yaml
+apiVersion: eddi.labs.ai/v1beta1
+kind: Eddi
+metadata:
+  name: my-eddi
+spec:
+  version: "6.0.0"
+  replicas: 3
+  scheduling:
+    nodeSelector:
+      kubernetes.io/arch: amd64
+      node-type: ai-workload
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: ai
+        effect: NoSchedule
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: eddi
+```
+
+All scheduling fields accept standard Kubernetes types and are applied to the EDDI server Deployment pods.
+
+---
+
+## Backup & Restore
+
+### PVC-based Backup
+
+```yaml
+apiVersion: eddi.labs.ai/v1beta1
+kind: Eddi
+metadata:
+  name: my-eddi
+spec:
+  version: "6.0.0"
+  datastore:
+    type: postgres
+    managed:
+      enabled: true
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"    # Daily at 02:00
+    retentionDays: 14
+    storage:
+      type: pvc
+      pvc:
+        size: 100Gi
+        storageClassName: fast-ssd
+```
+
+### S3-based Backup (MinIO / AWS)
+
+```yaml
+spec:
+  backup:
+    enabled: true
+    schedule: "0 */6 * * *"  # Every 6 hours
+    retentionDays: 30
+    storage:
+      type: s3
+      s3:
+        bucket: eddi-backups
+        region: eu-central-1
+        endpoint: "https://minio.internal:9000"  # For MinIO
+        secretRef: eddi-s3-credentials
+```
+
+The S3 secret must contain keys `access-key` and `secret-key`:
+
+```bash
+kubectl create secret generic eddi-s3-credentials \
+  --from-literal=access-key=AKIAIOSFODNN7EXAMPLE \
+  --from-literal=secret-key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+---
+
+## Custom Labels & Annotations
+
+Add custom labels and annotations to EDDI server pods for cost allocation, service mesh injection, or security scanning:
+
+```yaml
+apiVersion: eddi.labs.ai/v1beta1
+kind: Eddi
+metadata:
+  name: my-eddi
+spec:
+  version: "6.0.0"
+  podLabels:
+    cost-center: "ai-team"
+    environment: "production"
+  podAnnotations:
+    sidecar.istio.io/inject: "true"
+    prometheus.io/scrape: "true"
+```
+
+> **Note:** Operator-managed labels (`app.kubernetes.io/*`) take precedence over user-provided labels if there is a conflict.
+
+---
+
+## PVC Retention Policy
+
+By default, PersistentVolumeClaims created by StatefulSets (MongoDB, PostgreSQL, NATS) are **retained** when the `Eddi` CR is deleted. To automatically delete PVCs on CR deletion:
+
+```yaml
+spec:
+  pvcRetentionPolicy: "Delete"  # or "Retain" (default)
+```
+
+> **Warning:** Setting `pvcRetentionPolicy: Delete` will permanently destroy all managed database data when the CR is deleted. Use with caution.
 
 ---
 
