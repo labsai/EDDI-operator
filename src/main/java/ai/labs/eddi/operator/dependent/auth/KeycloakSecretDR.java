@@ -8,6 +8,8 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 
+import org.jboss.logging.Logger;
+
 import java.security.SecureRandom;
 import java.util.Map;
 
@@ -16,10 +18,14 @@ import java.util.Map;
  * Preserves existing credentials on subsequent reconciliations.
  * Only activated when spec.auth.enabled=true and spec.auth.managed.enabled=true
  * AND spec.auth.managed.adminSecretRef is empty.
+ *
+ * <p><strong>Resilience:</strong> If the API lookup for an existing secret fails,
+ * this DR throws rather than silently regenerating credentials.</p>
  */
 @KubernetesDependent
 public class KeycloakSecretDR extends CRUDKubernetesDependentResource<Secret, EddiResource> {
 
+    private static final Logger LOG = Logger.getLogger(KeycloakSecretDR.class);
     private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*";
     private static final int PASSWORD_LENGTH = 24;
 
@@ -31,11 +37,21 @@ public class KeycloakSecretDR extends CRUDKubernetesDependentResource<Secret, Ed
     protected Secret desired(EddiResource eddi, Context<EddiResource> context) {
         var secretName = Labels.resourceName(eddi, "keycloak-admin");
 
-        // Use direct client lookup to avoid secondary resource ambiguity
-        var existing = context.getClient().secrets()
-                .inNamespace(eddi.getMetadata().getNamespace())
-                .withName(secretName)
-                .get();
+        // Use direct client lookup to avoid secondary resource ambiguity.
+        // A transient API failure here MUST NOT cause silent credential regeneration.
+        Secret existing;
+        try {
+            existing = context.getClient().secrets()
+                    .inNamespace(eddi.getMetadata().getNamespace())
+                    .withName(secretName)
+                    .get();
+        } catch (Exception e) {
+            LOG.warnf(e, "Keycloak secret lookup failed for '%s'. " +
+                    "Aborting to prevent accidental credential regeneration.", secretName);
+            throw new IllegalStateException(
+                    "Cannot verify existence of keycloak secret '" + secretName
+                            + "'. Retrying on next reconciliation.", e);
+        }
 
         if (existing != null && existing.getData() != null
                 && existing.getData().containsKey("username")

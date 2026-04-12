@@ -57,15 +57,15 @@ public class BackupSpec {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class BackupStorageSpec {
-        private String type = "pvc"; // "pvc" | "s3"
+        private BackupStorageType type = BackupStorageType.PVC;
         private PvcBackupSpec pvc = new PvcBackupSpec();
         private S3BackupSpec s3 = new S3BackupSpec();
 
-        public String getType() {
+        public BackupStorageType getType() {
             return type;
         }
 
-        public void setType(String type) {
+        public void setType(BackupStorageType type) {
             this.type = type;
         }
 

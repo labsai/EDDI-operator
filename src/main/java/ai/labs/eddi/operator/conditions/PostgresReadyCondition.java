@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.conditions;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -25,7 +26,7 @@ public class PostgresReadyCondition implements Condition<HasMetadata, EddiResour
         if (!eddi.getSpec().getDatastore().getManaged().isEnabled()) {
             return true; // External DB assumed ready
         }
-        if (!"postgres".equals(eddi.getSpec().getDatastore().getType())) {
+        if (DatastoreType.POSTGRES != eddi.getSpec().getDatastore().getType()) {
             return true; // Not using PostgreSQL
         }
 

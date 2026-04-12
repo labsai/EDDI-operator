@@ -2,6 +2,8 @@ package ai.labs.eddi.operator.dependent.core;
 
 import ai.labs.eddi.operator.crd.EddiResource;
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
+import ai.labs.eddi.operator.crd.spec.MessagingType;
 import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -47,9 +49,9 @@ public class ConfigMapDR extends CRUDKubernetesDependentResource<ConfigMap, Eddi
         var data = new LinkedHashMap<String, String>();
 
         // Datastore configuration
-        data.put("EDDI_DATASTORE_TYPE", spec.getDatastore().getType());
+        data.put("EDDI_DATASTORE_TYPE", spec.getDatastore().getType().getValue());
 
-        if ("mongodb".equals(spec.getDatastore().getType())) {
+        if (DatastoreType.MONGODB == spec.getDatastore().getType()) {
             if (spec.getDatastore().getManaged().isEnabled()) {
                 data.put("MONGODB_CONNECTION_STRING", Defaults.managedMongoConnectionString(crName));
             } else {
@@ -58,7 +60,7 @@ public class ConfigMapDR extends CRUDKubernetesDependentResource<ConfigMap, Eddi
                     data.put("MONGODB_CONNECTION_STRING", connStr);
                 }
             }
-        } else if ("postgres".equals(spec.getDatastore().getType())) {
+        } else if (DatastoreType.POSTGRES == spec.getDatastore().getType()) {
             data.put("QUARKUS_PROFILE", "postgres");
             if (spec.getDatastore().getManaged().isEnabled()) {
                 data.put("QUARKUS_DATASOURCE_JDBC_URL", Defaults.managedPostgresJdbcUrl(crName));
@@ -67,8 +69,8 @@ public class ConfigMapDR extends CRUDKubernetesDependentResource<ConfigMap, Eddi
         }
 
         // Messaging configuration
-        data.put("EDDI_MESSAGING_TYPE", spec.getMessaging().getType());
-        if ("nats".equals(spec.getMessaging().getType())) {
+        data.put("EDDI_MESSAGING_TYPE", spec.getMessaging().getType().getValue());
+        if (MessagingType.NATS == spec.getMessaging().getType()) {
             if (spec.getMessaging().getManaged().isEnabled()) {
                 data.put("NATS_URL", Defaults.managedNatsUrl(crName));
             } else {

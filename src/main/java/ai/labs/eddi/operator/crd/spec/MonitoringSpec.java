@@ -3,9 +3,12 @@ package ai.labs.eddi.operator.crd.spec;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Observability configuration — ServiceMonitor, GrafanaDashboard, PrometheusRule.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MonitoringSpec {
 
     private ServiceMonitorSpec serviceMonitor = new ServiceMonitorSpec();

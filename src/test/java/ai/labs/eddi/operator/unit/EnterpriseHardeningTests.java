@@ -4,6 +4,8 @@ import ai.labs.eddi.operator.conditions.BackupActivationCondition;
 import ai.labs.eddi.operator.conditions.BackupPvcActivationCondition;
 import ai.labs.eddi.operator.crd.EddiResource;
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.BackupStorageType;
+import ai.labs.eddi.operator.crd.spec.PvcRetentionPolicy;
 import ai.labs.eddi.operator.crd.spec.SchedulingSpec;
 import ai.labs.eddi.operator.reconciler.EddiReconciler;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
@@ -72,7 +74,7 @@ class EnterpriseHardeningTests {
     @Test
     void shouldDefaultPvcRetentionPolicyToRetain() {
         var spec = new EddiSpec();
-        assertThat(spec.getPvcRetentionPolicy()).isEqualTo("Retain");
+        assertThat(spec.getPvcRetentionPolicy()).isEqualTo(PvcRetentionPolicy.RETAIN);
     }
 
     @Test
@@ -89,30 +91,21 @@ class EnterpriseHardeningTests {
     }
 
     // ────────────────────────────────────────────────────
-    //  PVC Retention Policy Validation
+    //  PVC Retention Policy
     // ────────────────────────────────────────────────────
 
     @Test
     void shouldAcceptRetainPolicy() {
         var spec = new EddiSpec();
-        spec.setPvcRetentionPolicy("Retain");
+        spec.setPvcRetentionPolicy(PvcRetentionPolicy.RETAIN);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
 
     @Test
     void shouldAcceptDeletePolicy() {
         var spec = new EddiSpec();
-        spec.setPvcRetentionPolicy("Delete");
+        spec.setPvcRetentionPolicy(PvcRetentionPolicy.DELETE);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
-    }
-
-    @Test
-    void shouldRejectInvalidPvcRetentionPolicy() {
-        var spec = new EddiSpec();
-        spec.setPvcRetentionPolicy("garbage");
-        assertThat(EddiReconciler.validateSpec(spec))
-                .contains("pvcRetentionPolicy")
-                .contains("garbage");
     }
 
     // ────────────────────────────────────────────────────
@@ -130,7 +123,8 @@ class EnterpriseHardeningTests {
     void shouldAcceptEnabledBackupWithPvc() {
         var spec = new EddiSpec();
         spec.getBackup().setEnabled(true);
-        spec.getBackup().getStorage().setType("pvc");
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.PVC);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
 
@@ -138,7 +132,8 @@ class EnterpriseHardeningTests {
     void shouldAcceptEnabledBackupWithS3() {
         var spec = new EddiSpec();
         spec.getBackup().setEnabled(true);
-        spec.getBackup().getStorage().setType("s3");
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.S3);
         spec.getBackup().getStorage().getS3().setBucket("my-bucket");
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
@@ -147,21 +142,12 @@ class EnterpriseHardeningTests {
     void shouldRejectS3BackupWithoutBucket() {
         var spec = new EddiSpec();
         spec.getBackup().setEnabled(true);
-        spec.getBackup().getStorage().setType("s3");
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.S3);
         spec.getBackup().getStorage().getS3().setBucket("");
         assertThat(EddiReconciler.validateSpec(spec))
                 .contains("bucket")
                 .contains("required");
-    }
-
-    @Test
-    void shouldRejectInvalidBackupStorageType() {
-        var spec = new EddiSpec();
-        spec.getBackup().setEnabled(true);
-        spec.getBackup().getStorage().setType("gcs");
-        assertThat(EddiReconciler.validateSpec(spec))
-                .contains("backup.storage.type")
-                .contains("gcs");
     }
 
     @Test
@@ -188,7 +174,7 @@ class EnterpriseHardeningTests {
         var spec = new EddiSpec();
         spec.getBackup().setEnabled(true);
         spec.getBackup().setSchedule("0 2 * * *");
-        spec.getBackup().getStorage().setType("pvc");
+        spec.getBackup().getStorage().setType(BackupStorageType.PVC);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
 
@@ -197,7 +183,7 @@ class EnterpriseHardeningTests {
         var spec = new EddiSpec();
         spec.getBackup().setEnabled(true);
         spec.getBackup().setSchedule("*/15 0-6 1,15 * 1-5");
-        spec.getBackup().getStorage().setType("pvc");
+        spec.getBackup().getStorage().setType(BackupStorageType.PVC);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
 
@@ -226,7 +212,7 @@ class EnterpriseHardeningTests {
         var cond = new BackupPvcActivationCondition();
         var eddi = createEddi();
         eddi.getSpec().getBackup().setEnabled(true);
-        eddi.getSpec().getBackup().getStorage().setType("pvc");
+        eddi.getSpec().getBackup().getStorage().setType(BackupStorageType.PVC);
         assertThat(cond.isMet(null, eddi, null)).isTrue();
     }
 
@@ -235,7 +221,7 @@ class EnterpriseHardeningTests {
         var cond = new BackupPvcActivationCondition();
         var eddi = createEddi();
         eddi.getSpec().getBackup().setEnabled(true);
-        eddi.getSpec().getBackup().getStorage().setType("s3");
+        eddi.getSpec().getBackup().getStorage().setType(BackupStorageType.S3);
         assertThat(cond.isMet(null, eddi, null)).isFalse();
     }
 
@@ -244,7 +230,7 @@ class EnterpriseHardeningTests {
         var cond = new BackupPvcActivationCondition();
         var eddi = createEddi();
         eddi.getSpec().getBackup().setEnabled(false);
-        eddi.getSpec().getBackup().getStorage().setType("pvc");
+        eddi.getSpec().getBackup().getStorage().setType(BackupStorageType.PVC);
         assertThat(cond.isMet(null, eddi, null)).isFalse();
     }
 

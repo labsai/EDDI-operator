@@ -1,8 +1,11 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Authentication configuration — currently supports Keycloak.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthSpec {
 
     private boolean enabled = false;
@@ -42,15 +45,16 @@ public class AuthSpec {
         this.external = external;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ManagedAuthSpec {
         private boolean enabled = false;
         private ComponentImageSpec image = new ComponentImageSpec("quay.io/keycloak/keycloak", "26.0");
         private String adminSecretRef = "";
         /**
-         * Keycloak mode: "dev" uses start-dev with ephemeral storage,
-         * "production" uses start with TLS and requires an admin secret.
+         * Keycloak mode: DEV uses start-dev with ephemeral storage,
+         * PRODUCTION uses start with TLS and requires an admin secret.
          */
-        private String mode = "dev";
+        private KeycloakMode mode = KeycloakMode.DEV;
         private ResourcesSpec resources = new ResourcesSpec("250m", "512Mi", "1", "1Gi");
 
         public boolean isEnabled() {
@@ -77,11 +81,11 @@ public class AuthSpec {
             this.adminSecretRef = adminSecretRef;
         }
 
-        public String getMode() {
+        public KeycloakMode getMode() {
             return mode;
         }
 
-        public void setMode(String mode) {
+        public void setMode(KeycloakMode mode) {
             this.mode = mode;
         }
 
@@ -94,6 +98,7 @@ public class AuthSpec {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ExternalAuthSpec {
         private String authServerUrl = "";
         private String clientId = "eddi-backend";

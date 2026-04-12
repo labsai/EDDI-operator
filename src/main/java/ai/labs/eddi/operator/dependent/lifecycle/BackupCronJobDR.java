@@ -2,6 +2,8 @@ package ai.labs.eddi.operator.dependent.lifecycle;
 
 import ai.labs.eddi.operator.crd.EddiResource;
 import ai.labs.eddi.operator.crd.spec.BackupSpec;
+import ai.labs.eddi.operator.crd.spec.BackupStorageType;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
 import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
@@ -36,12 +38,14 @@ public class BackupCronJobDR extends CRUDKubernetesDependentResource<CronJob, Ed
         var backup = spec.getBackup();
         var name = Labels.resourceName(eddi, "backup");
         var datastoreType = spec.getDatastore().getType();
-        var isPvcStorage = "pvc".equals(backup.getStorage().getType());
+        var isPvcStorage = BackupStorageType.PVC == backup.getStorage().getType();
 
-        // Resolve the host name for the datastore
-        var dbHost = "mongodb".equals(datastoreType)
-                ? Labels.resourceName(eddi, "mongodb")
-                : Labels.resourceName(eddi, "postgres");
+        // Resolve the host name for the datastore — sanitized against shell injection
+        var dbHost = Labels.sanitizeForShell(
+                DatastoreType.MONGODB == datastoreType
+                        ? Labels.resourceName(eddi, "mongodb")
+                        : Labels.resourceName(eddi, "postgres")
+        );
 
         // Volumes and mounts — only for PVC-based storage
         var volumes = new ArrayList<Volume>();
@@ -97,7 +101,7 @@ public class BackupCronJobDR extends CRUDKubernetesDependentResource<CronJob, Ed
         }
 
         // For managed postgres, mount credentials
-        if ("postgres".equals(datastoreType) && spec.getDatastore().getManaged().isEnabled()) {
+        if (DatastoreType.POSTGRES == datastoreType && spec.getDatastore().getManaged().isEnabled()) {
             var pgSecretName = Labels.resourceName(eddi, "postgres-credentials");
             env.add(new EnvVarBuilder()
                     .withName("PGUSER")
@@ -172,7 +176,7 @@ public class BackupCronJobDR extends CRUDKubernetesDependentResource<CronJob, Ed
      * Resolves the backup container image, using the configured image spec
      * if provided, or falling back to datastore-appropriate defaults.
      */
-    private String resolveBackupImage(BackupSpec backup, String datastoreType) {
+    public static String resolveBackupImage(BackupSpec backup, DatastoreType datastoreType) {
         var imgSpec = backup.getImage();
         if (imgSpec != null) {
             var repo = imgSpec.getRepository();
@@ -181,7 +185,7 @@ public class BackupCronJobDR extends CRUDKubernetesDependentResource<CronJob, Ed
                 return Defaults.resolveImage(repo, tag);
             }
         }
-        return "mongodb".equals(datastoreType)
+        return DatastoreType.MONGODB == datastoreType
                 ? DEFAULT_MONGO_BACKUP_IMAGE
                 : DEFAULT_POSTGRES_BACKUP_IMAGE;
     }
@@ -189,16 +193,17 @@ public class BackupCronJobDR extends CRUDKubernetesDependentResource<CronJob, Ed
     /**
      * Builds the backup shell command for the specified datastore type.
      * Includes timestamp-based naming and retention cleanup.
+     * The dbHost parameter MUST be sanitized via Labels.sanitizeForShell() before calling.
      *
-     * @param datastoreType "mongodb" or "postgres"
-     * @param dbHost        resolved hostname for the database service
+     * @param datastoreType the datastore type enum
+     * @param dbHost        sanitized hostname for the database service
      * @param backup        backup configuration spec
      */
-    private String buildBackupCommand(String datastoreType, String dbHost, BackupSpec backup) {
+    public static String buildBackupCommand(DatastoreType datastoreType, String dbHost, BackupSpec backup) {
         var retention = backup.getRetentionDays();
-        var isS3 = "s3".equals(backup.getStorage().getType());
+        var isS3 = BackupStorageType.S3 == backup.getStorage().getType();
 
-        if ("mongodb".equals(datastoreType)) {
+        if (DatastoreType.MONGODB == datastoreType) {
             if (isS3) {
                 return "mongodump --host=" + dbHost + " --port=27017 --db=eddi --archive"
                         + " | gzip | aws s3 cp - s3://$S3_BUCKET/eddi-backups/eddi-$(date +%Y%m%d-%H%M%S).archive.gz"

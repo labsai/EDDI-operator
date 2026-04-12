@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.crd;
 
 import ai.labs.eddi.operator.crd.spec.*;
+import ai.labs.eddi.operator.crd.spec.PvcRetentionPolicy;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 
@@ -65,7 +66,7 @@ public class EddiSpec {
     private Map<String, String> podAnnotations = new LinkedHashMap<>();
 
     @JsonPropertyDescription("PVC retention policy on CR deletion: Retain (default) or Delete")
-    private String pvcRetentionPolicy = "Retain";
+    private PvcRetentionPolicy pvcRetentionPolicy = PvcRetentionPolicy.RETAIN;
 
     @JsonPropertyDescription("CORS allowed origins")
     private String cors = "http://localhost:3000,http://localhost:7070";
@@ -211,11 +212,11 @@ public class EddiSpec {
         this.podAnnotations = podAnnotations;
     }
 
-    public String getPvcRetentionPolicy() {
+    public PvcRetentionPolicy getPvcRetentionPolicy() {
         return pvcRetentionPolicy;
     }
 
-    public void setPvcRetentionPolicy(String pvcRetentionPolicy) {
+    public void setPvcRetentionPolicy(PvcRetentionPolicy pvcRetentionPolicy) {
         this.pvcRetentionPolicy = pvcRetentionPolicy;
     }
 

@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.conditions;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.crd.spec.MessagingType;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -23,7 +24,7 @@ public class NatsReadyCondition implements Condition<HasMetadata, EddiResource> 
     public boolean isMet(DependentResource<HasMetadata, EddiResource> dependentResource,
                           EddiResource eddi,
                           Context<EddiResource> context) {
-        if ("in-memory".equals(eddi.getSpec().getMessaging().getType())) {
+        if (MessagingType.IN_MEMORY == eddi.getSpec().getMessaging().getType()) {
             return true;
         }
         if (!eddi.getSpec().getMessaging().getManaged().isEnabled()) {

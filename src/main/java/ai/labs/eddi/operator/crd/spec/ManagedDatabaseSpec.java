@@ -1,8 +1,11 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Configuration for operator-managed database instances.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ManagedDatabaseSpec {
 
     private boolean enabled = true;

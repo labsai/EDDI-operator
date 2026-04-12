@@ -1,14 +1,17 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Network exposure configuration — Route, Ingress, or auto-detect.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ExposureSpec {
 
-    private String type = "auto"; // "auto" | "route" | "ingress" | "none"
+    private ExposureType type = ExposureType.AUTO;
     private String host = "";
 
     private TlsSpec tls = new TlsSpec();
@@ -16,11 +19,11 @@ public class ExposureSpec {
     private Map<String, String> annotations = new HashMap<>();
     private String ingressClassName = "";
 
-    public String getType() {
+    public ExposureType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(ExposureType type) {
         this.type = type;
     }
 
@@ -56,6 +59,7 @@ public class ExposureSpec {
         this.ingressClassName = ingressClassName;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class TlsSpec {
         private boolean enabled = true;
         private String secretRef = "";

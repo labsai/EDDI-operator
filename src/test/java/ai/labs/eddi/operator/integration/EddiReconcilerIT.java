@@ -2,6 +2,7 @@ package ai.labs.eddi.operator.integration;
 
 import ai.labs.eddi.operator.crd.EddiResource;
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.quarkus.test.junit.QuarkusTest;
@@ -46,7 +47,7 @@ class EddiReconcilerIT {
         var spec = new EddiSpec();
         spec.setVersion("6.0.0");
         spec.setReplicas(1);
-        spec.getDatastore().setType("mongodb");
+        spec.getDatastore().setType(DatastoreType.MONGODB);
         spec.getDatastore().getManaged().setEnabled(true);
         eddi.setSpec(spec);
 
@@ -58,7 +59,7 @@ class EddiReconcilerIT {
      */
     private EddiResource createPostgresEddi() {
         var eddi = createMinimalEddi();
-        eddi.getSpec().getDatastore().setType("postgres");
+        eddi.getSpec().getDatastore().setType(DatastoreType.POSTGRES);
         eddi.getSpec().getDatastore().getManaged().setEnabled(true);
         return eddi;
     }

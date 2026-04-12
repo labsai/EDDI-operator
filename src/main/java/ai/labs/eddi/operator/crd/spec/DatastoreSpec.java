@@ -1,20 +1,23 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Datastore configuration — supports MongoDB or PostgreSQL,
  * each in managed (operator-deployed) or external (pre-existing) mode.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DatastoreSpec {
 
-    private String type = "mongodb"; // "mongodb" | "postgres"
+    private DatastoreType type = DatastoreType.MONGODB;
     private ManagedDatabaseSpec managed = new ManagedDatabaseSpec();
     private ExternalDatabaseSpec external = new ExternalDatabaseSpec();
 
-    public String getType() {
+    public DatastoreType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(DatastoreType type) {
         this.type = type;
     }
 

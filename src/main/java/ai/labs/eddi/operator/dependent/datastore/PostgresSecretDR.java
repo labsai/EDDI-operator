@@ -8,16 +8,23 @@ import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
 
+import org.jboss.logging.Logger;
+
 import java.security.SecureRandom;
 import java.util.Map;
 
 /**
  * Auto-generates PostgreSQL credentials when using managed PostgreSQL.
  * Preserves existing credentials on subsequent reconciliations.
+ *
+ * <p><strong>Resilience:</strong> If the API lookup for an existing secret fails,
+ * this DR throws rather than silently regenerating credentials — which would lock
+ * the operator out of the managed database.</p>
  */
 @KubernetesDependent
 public class PostgresSecretDR extends CRUDKubernetesDependentResource<Secret, EddiResource> {
 
+    private static final Logger LOG = Logger.getLogger(PostgresSecretDR.class);
     private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int PASSWORD_LENGTH = 24;
 
@@ -29,11 +36,21 @@ public class PostgresSecretDR extends CRUDKubernetesDependentResource<Secret, Ed
     protected Secret desired(EddiResource eddi, Context<EddiResource> context) {
         var secretName = Labels.resourceName(eddi, "postgres-credentials");
 
-        // Use direct client lookup to avoid secondary resource ambiguity
-        var existing = context.getClient().secrets()
-                .inNamespace(eddi.getMetadata().getNamespace())
-                .withName(secretName)
-                .get();
+        // Use direct client lookup to avoid secondary resource ambiguity.
+        // A transient API failure here MUST NOT cause silent credential regeneration.
+        Secret existing;
+        try {
+            existing = context.getClient().secrets()
+                    .inNamespace(eddi.getMetadata().getNamespace())
+                    .withName(secretName)
+                    .get();
+        } catch (Exception e) {
+            LOG.warnf(e, "PostgreSQL secret lookup failed for '%s'. " +
+                    "Aborting to prevent accidental credential regeneration.", secretName);
+            throw new IllegalStateException(
+                    "Cannot verify existence of postgres secret '" + secretName
+                            + "'. Retrying on next reconciliation.", e);
+        }
 
         if (existing != null && existing.getData() != null
                 && existing.getData().containsKey("username")
@@ -65,7 +82,7 @@ public class PostgresSecretDR extends CRUDKubernetesDependentResource<Secret, Ed
                 .build();
     }
 
-    static String generatePassword() {
+    public static String generatePassword() {
         var random = new SecureRandom();
         var sb = new StringBuilder(PASSWORD_LENGTH);
         for (int i = 0; i < PASSWORD_LENGTH; i++) {

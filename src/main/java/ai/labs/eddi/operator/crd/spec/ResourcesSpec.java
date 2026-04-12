@@ -1,9 +1,12 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Kubernetes resource requests and limits specification.
  * Reused across EDDI, database, messaging, and auth components.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ResourcesSpec {
 
     private static final String DEFAULT_REQUEST_CPU = "250m";

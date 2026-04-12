@@ -63,4 +63,28 @@ public final class Labels {
         }
         return name;
     }
+
+    /**
+     * Sanitizes a string for safe use in shell commands.
+     * Only allows DNS-safe characters (lowercase alphanumeric, hyphens, dots).
+     * Rejects anything containing shell metacharacters.
+     *
+     * @param input the string to sanitize (typically a Kubernetes resource name)
+     * @return the validated input
+     * @throws IllegalArgumentException if the input contains unsafe characters
+     */
+    public static String sanitizeForShell(String input) {
+        if (input == null || input.isBlank()) {
+            throw new IllegalArgumentException("Shell input must not be null or blank");
+        }
+        if (!SHELL_SAFE_PATTERN.matcher(input).matches()) {
+            throw new IllegalArgumentException(
+                    "Unsafe characters in shell input: '" + input
+                            + "'. Only [a-z0-9.-] are allowed.");
+        }
+        return input;
+    }
+
+    private static final java.util.regex.Pattern SHELL_SAFE_PATTERN =
+            java.util.regex.Pattern.compile("^[a-z0-9][a-z0-9.\\-]*$");
 }

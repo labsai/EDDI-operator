@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.dependent.auth;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.crd.spec.KeycloakMode;
 import ai.labs.eddi.operator.util.Defaults;
 import ai.labs.eddi.operator.util.Labels;
 import io.fabric8.kubernetes.api.model.*;
@@ -85,7 +86,7 @@ public class KeycloakDeploymentDR extends CRUDKubernetesDependentResource<Deploy
                                 .withName("keycloak")
                                 .withImage(image)
                                 .withArgs(List.of(
-                                        "production".equals(authManaged.getMode()) ? "start" : "start-dev"
+                                        KeycloakMode.PRODUCTION == authManaged.getMode() ? "start" : "start-dev"
                                 ))
                                 .withPorts(List.of(
                                         new ContainerPortBuilder()

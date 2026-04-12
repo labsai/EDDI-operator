@@ -1,8 +1,11 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Manager UI configuration.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ManagerSpec {
 
     private boolean enabled = false;

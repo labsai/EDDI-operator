@@ -1,21 +1,24 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Messaging configuration — in-memory or NATS JetStream.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MessagingSpec {
 
-    private String type = "in-memory"; // "in-memory" | "nats"
+    private MessagingType type = MessagingType.IN_MEMORY;
 
     private ManagedMessagingSpec managed = new ManagedMessagingSpec();
 
     private ExternalMessagingSpec external = new ExternalMessagingSpec();
 
-    public String getType() {
+    public MessagingType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(MessagingType type) {
         this.type = type;
     }
 
@@ -35,6 +38,7 @@ public class MessagingSpec {
         this.external = external;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ManagedMessagingSpec {
         private boolean enabled = true;
         private ComponentImageSpec image = new ComponentImageSpec("nats", "2.10-alpine");
@@ -74,6 +78,7 @@ public class MessagingSpec {
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ExternalMessagingSpec {
         private String url = "";
 

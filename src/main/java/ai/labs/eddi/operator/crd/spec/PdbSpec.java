@@ -1,8 +1,11 @@
 package ai.labs.eddi.operator.crd.spec;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Pod Disruption Budget configuration.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PdbSpec {
 
     private boolean enabled = false;

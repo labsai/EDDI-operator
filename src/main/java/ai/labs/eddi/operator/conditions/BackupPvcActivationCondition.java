@@ -1,6 +1,7 @@
 package ai.labs.eddi.operator.conditions;
 
 import ai.labs.eddi.operator.crd.EddiResource;
+import ai.labs.eddi.operator.crd.spec.BackupStorageType;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.dependent.DependentResource;
@@ -16,6 +17,6 @@ public class BackupPvcActivationCondition implements Condition<HasMetadata, Eddi
                           EddiResource eddi,
                           Context<EddiResource> context) {
         var backup = eddi.getSpec().getBackup();
-        return backup.isEnabled() && "pvc".equals(backup.getStorage().getType());
+        return backup.isEnabled() && BackupStorageType.PVC == backup.getStorage().getType();
     }
 }

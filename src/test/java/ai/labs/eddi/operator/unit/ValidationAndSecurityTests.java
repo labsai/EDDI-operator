@@ -2,7 +2,7 @@ package ai.labs.eddi.operator.unit;
 
 import ai.labs.eddi.operator.crd.EddiSpec;
 import ai.labs.eddi.operator.crd.EddiResource;
-import ai.labs.eddi.operator.crd.spec.ComponentImageSpec;
+import ai.labs.eddi.operator.crd.spec.*;
 import ai.labs.eddi.operator.conditions.KeycloakSecretActivationCondition;
 import ai.labs.eddi.operator.dependent.auth.KeycloakSecretDR;
 import ai.labs.eddi.operator.reconciler.EddiReconciler;
@@ -10,16 +10,13 @@ import ai.labs.eddi.operator.util.Defaults;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for new code from the code-review remediation:
- * - Spec validation
- * - resolveImage utility
- * - KeycloakSecretActivationCondition
- * - KeycloakSecretDR password generation
+ * Tests for spec validation, resolveImage utility,
+ * KeycloakSecretActivationCondition, and KeycloakSecretDR password generation.
  */
 class ValidationAndSecurityTests {
 
@@ -36,35 +33,8 @@ class ValidationAndSecurityTests {
     @Test
     void shouldAcceptValidPostgresSpec() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("postgres");
+        spec.getDatastore().setType(DatastoreType.POSTGRES);
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
-    }
-
-    @Test
-    void shouldRejectInvalidDatastoreType() {
-        var spec = new EddiSpec();
-        spec.getDatastore().setType("mysql");
-        assertThat(EddiReconciler.validateSpec(spec))
-                .contains("mysql")
-                .contains("datastore.type");
-    }
-
-    @Test
-    void shouldRejectInvalidMessagingType() {
-        var spec = new EddiSpec();
-        spec.getMessaging().setType("kafka");
-        assertThat(EddiReconciler.validateSpec(spec))
-                .contains("kafka")
-                .contains("messaging.type");
-    }
-
-    @Test
-    void shouldRejectInvalidExposureType() {
-        var spec = new EddiSpec();
-        spec.getExposure().setType("nodeport");
-        assertThat(EddiReconciler.validateSpec(spec))
-                .contains("nodeport")
-                .contains("exposure.type");
     }
 
     @Test
@@ -84,18 +54,73 @@ class ValidationAndSecurityTests {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "mongodb, in-memory, auto",
-            "mongodb, nats, auto",
-            "postgres, in-memory, ingress",
-            "postgres, nats, route",
-            "mongodb, in-memory, none"
-    })
-    void shouldAcceptAllValidEnumCombinations(String ds, String msg, String exp) {
+    @EnumSource(DatastoreType.class)
+    void shouldAcceptAllDatastoreTypes(DatastoreType type) {
         var spec = new EddiSpec();
-        spec.getDatastore().setType(ds);
-        spec.getMessaging().setType(msg);
-        spec.getExposure().setType(exp);
+        spec.getDatastore().setType(type);
+        assertThat(EddiReconciler.validateSpec(spec)).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(MessagingType.class)
+    void shouldAcceptAllMessagingTypes(MessagingType type) {
+        var spec = new EddiSpec();
+        spec.getMessaging().setType(type);
+        assertThat(EddiReconciler.validateSpec(spec)).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ExposureType.class)
+    void shouldAcceptAllExposureTypes(ExposureType type) {
+        var spec = new EddiSpec();
+        spec.getExposure().setType(type);
+        assertThat(EddiReconciler.validateSpec(spec)).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(PvcRetentionPolicy.class)
+    void shouldAcceptAllPvcRetentionPolicies(PvcRetentionPolicy policy) {
+        var spec = new EddiSpec();
+        spec.setPvcRetentionPolicy(policy);
+        assertThat(EddiReconciler.validateSpec(spec)).isNull();
+    }
+
+    @Test
+    void shouldAcceptValidBackupSpec() {
+        var spec = new EddiSpec();
+        spec.getBackup().setEnabled(true);
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.PVC);
+        assertThat(EddiReconciler.validateSpec(spec)).isNull();
+    }
+
+    @Test
+    void shouldRejectInvalidBackupSchedule() {
+        var spec = new EddiSpec();
+        spec.getBackup().setEnabled(true);
+        spec.getBackup().setSchedule("not-a-cron");
+        assertThat(EddiReconciler.validateSpec(spec))
+                .contains("schedule");
+    }
+
+    @Test
+    void shouldRejectS3BackupWithoutBucket() {
+        var spec = new EddiSpec();
+        spec.getBackup().setEnabled(true);
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.S3);
+        spec.getBackup().getStorage().getS3().setBucket("");
+        assertThat(EddiReconciler.validateSpec(spec))
+                .contains("bucket");
+    }
+
+    @Test
+    void shouldAcceptS3BackupWithBucket() {
+        var spec = new EddiSpec();
+        spec.getBackup().setEnabled(true);
+        spec.getBackup().setSchedule("0 2 * * *");
+        spec.getBackup().getStorage().setType(BackupStorageType.S3);
+        spec.getBackup().getStorage().getS3().setBucket("my-bucket");
         assertThat(EddiReconciler.validateSpec(spec)).isNull();
     }
 
@@ -126,7 +151,6 @@ class ValidationAndSecurityTests {
 
     @Test
     void shouldNotDoubleTagWhenRepoContainsColon() {
-        // If someone passes "mongo:7.0" as repo, don't append tag
         assertThat(Defaults.resolveImage("mongo:7.0", "8.0")).isEqualTo("mongo:7.0");
     }
 
@@ -139,7 +163,6 @@ class ValidationAndSecurityTests {
         var cond = new KeycloakSecretActivationCondition();
         var eddi = createEddi();
         eddi.getSpec().getAuth().setEnabled(false);
-
         assertThat(cond.isMet(null, eddi, null)).isFalse();
     }
 
@@ -149,7 +172,6 @@ class ValidationAndSecurityTests {
         var eddi = createEddi();
         eddi.getSpec().getAuth().setEnabled(true);
         eddi.getSpec().getAuth().getManaged().setEnabled(false);
-
         assertThat(cond.isMet(null, eddi, null)).isFalse();
     }
 
@@ -160,7 +182,6 @@ class ValidationAndSecurityTests {
         eddi.getSpec().getAuth().setEnabled(true);
         eddi.getSpec().getAuth().getManaged().setEnabled(true);
         eddi.getSpec().getAuth().getManaged().setAdminSecretRef("");
-
         assertThat(cond.isMet(null, eddi, null)).isTrue();
     }
 
@@ -171,7 +192,6 @@ class ValidationAndSecurityTests {
         eddi.getSpec().getAuth().setEnabled(true);
         eddi.getSpec().getAuth().getManaged().setEnabled(true);
         eddi.getSpec().getAuth().getManaged().setAdminSecretRef("my-kc-secret");
-
         assertThat(cond.isMet(null, eddi, null)).isFalse();
     }
 

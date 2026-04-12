@@ -1,6 +1,8 @@
 package ai.labs.eddi.operator.util;
 
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
+import ai.labs.eddi.operator.crd.spec.MessagingType;
 import ai.labs.eddi.operator.crd.spec.ResourcesSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
@@ -40,7 +42,7 @@ public final class Defaults {
      * Determines whether managed MongoDB should be deployed.
      */
     public static boolean isManagedMongodb(EddiSpec spec) {
-        return "mongodb".equals(spec.getDatastore().getType())
+        return DatastoreType.MONGODB == spec.getDatastore().getType()
                 && spec.getDatastore().getManaged().isEnabled();
     }
 
@@ -48,7 +50,7 @@ public final class Defaults {
      * Determines whether managed PostgreSQL should be deployed.
      */
     public static boolean isManagedPostgres(EddiSpec spec) {
-        return "postgres".equals(spec.getDatastore().getType())
+        return DatastoreType.POSTGRES == spec.getDatastore().getType()
                 && spec.getDatastore().getManaged().isEnabled();
     }
 
@@ -56,7 +58,7 @@ public final class Defaults {
      * Determines whether managed NATS should be deployed.
      */
     public static boolean isManagedNats(EddiSpec spec) {
-        return "nats".equals(spec.getMessaging().getType())
+        return MessagingType.NATS == spec.getMessaging().getType()
                 && spec.getMessaging().getManaged().isEnabled();
     }
 

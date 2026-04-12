@@ -2,6 +2,8 @@ package ai.labs.eddi.operator.unit;
 
 import ai.labs.eddi.operator.crd.EddiResource;
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
+import ai.labs.eddi.operator.crd.spec.MessagingType;
 import ai.labs.eddi.operator.dependent.core.ConfigMapDR;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +20,7 @@ class ConfigMapDRTest {
     @Test
     void shouldGenerateMongodbConfigForManagedMongo() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("mongodb");
+        spec.getDatastore().setType(DatastoreType.MONGODB);
         spec.getDatastore().getManaged().setEnabled(true);
 
         Map<String, String> data = ConfigMapDR.buildConfigData(spec, "my-eddi");
@@ -31,7 +33,7 @@ class ConfigMapDRTest {
     @Test
     void shouldGenerateExternalMongoConfig() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("mongodb");
+        spec.getDatastore().setType(DatastoreType.MONGODB);
         spec.getDatastore().getManaged().setEnabled(false);
         spec.getDatastore().getExternal().setConnectionString("mongodb://atlas.example.com:27017/eddi");
 
@@ -44,7 +46,7 @@ class ConfigMapDRTest {
     @Test
     void shouldGeneratePostgresConfigForManagedPostgres() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("postgres");
+        spec.getDatastore().setType(DatastoreType.POSTGRES);
         spec.getDatastore().getManaged().setEnabled(true);
 
         Map<String, String> data = ConfigMapDR.buildConfigData(spec, "my-eddi");
@@ -57,7 +59,7 @@ class ConfigMapDRTest {
     @Test
     void shouldGenerateNatsConfigForManagedNats() {
         var spec = new EddiSpec();
-        spec.getMessaging().setType("nats");
+        spec.getMessaging().setType(MessagingType.NATS);
         spec.getMessaging().getManaged().setEnabled(true);
 
         Map<String, String> data = ConfigMapDR.buildConfigData(spec, "my-eddi");

@@ -3,9 +3,12 @@ package ai.labs.eddi.operator.crd.spec;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Container image configuration for EDDI or sub-components.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ImageSpec {
 
     private String repository = "labsai/eddi";

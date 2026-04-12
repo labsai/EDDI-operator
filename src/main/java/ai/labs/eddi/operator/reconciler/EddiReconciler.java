@@ -14,6 +14,8 @@ import ai.labs.eddi.operator.dependent.monitoring.*;
 import ai.labs.eddi.operator.dependent.lifecycle.*;
 
 import ai.labs.eddi.operator.conditions.*;
+import ai.labs.eddi.operator.crd.spec.BackupStorageType;
+import ai.labs.eddi.operator.crd.spec.PvcRetentionPolicy;
 import ai.labs.eddi.operator.util.Labels;
 
 import io.fabric8.kubernetes.api.model.EventBuilder;
@@ -24,7 +26,7 @@ import io.javaoperatorsdk.operator.api.reconciler.dependent.Dependent;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -223,11 +225,6 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
 
     private static final Logger LOG = Logger.getLogger(EddiReconciler.class);
 
-    private static final Set<String> VALID_DATASTORE_TYPES = Set.of("mongodb", "postgres");
-    private static final Set<String> VALID_MESSAGING_TYPES = Set.of("in-memory", "nats");
-    private static final Set<String> VALID_EXPOSURE_TYPES = Set.of("auto", "route", "ingress", "none");
-    private static final Set<String> VALID_PVC_RETENTION = Set.of("Retain", "Delete");
-
     /** Basic 5-field cron pattern: minute hour day-of-month month day-of-week. */
     private static final java.util.regex.Pattern CRON_PATTERN =
             java.util.regex.Pattern.compile(
@@ -294,7 +291,7 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
                 "EDDI custom resource deleted, cleaning up managed resources");
 
         // If pvcRetentionPolicy is "Delete", clean up orphaned PVCs
-        if ("Delete".equals(eddi.getSpec().getPvcRetentionPolicy())) {
+        if (PvcRetentionPolicy.DELETE == eddi.getSpec().getPvcRetentionPolicy()) {
             cleanupPvcs(eddi, context);
         }
 
@@ -326,32 +323,12 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
      * or null if the spec is valid.
      */
     public static String validateSpec(EddiSpec spec) {
-        var dsType = spec.getDatastore().getType();
-        if (!VALID_DATASTORE_TYPES.contains(dsType)) {
-            return "Invalid spec.datastore.type: '" + dsType
-                    + "'. Must be one of: " + VALID_DATASTORE_TYPES;
-        }
-
-        var msgType = spec.getMessaging().getType();
-        if (!VALID_MESSAGING_TYPES.contains(msgType)) {
-            return "Invalid spec.messaging.type: '" + msgType
-                    + "'. Must be one of: " + VALID_MESSAGING_TYPES;
-        }
-
-        var expType = spec.getExposure().getType();
-        if (!VALID_EXPOSURE_TYPES.contains(expType)) {
-            return "Invalid spec.exposure.type: '" + expType
-                    + "'. Must be one of: " + VALID_EXPOSURE_TYPES;
-        }
+        // Enum fields (datastore.type, messaging.type, exposure.type, pvcRetentionPolicy)
+        // are validated at CRD schema level — Jackson deserialization rejects unknown values.
+        // Here we validate only runtime constraints.
 
         if (spec.getReplicas() < 1) {
             return "spec.replicas must be >= 1, got: " + spec.getReplicas();
-        }
-
-        var pvcPolicy = spec.getPvcRetentionPolicy();
-        if (pvcPolicy != null && !VALID_PVC_RETENTION.contains(pvcPolicy)) {
-            return "Invalid spec.pvcRetentionPolicy: '" + pvcPolicy
-                    + "'. Must be one of: " + VALID_PVC_RETENTION;
         }
 
         // Validate backup spec
@@ -362,13 +339,8 @@ public class EddiReconciler implements Reconciler<EddiResource>, Cleaner<EddiRes
                         + "'. Must be a 5-field cron expression (e.g., '0 2 * * *')";
             }
 
-            var backupStorage = spec.getBackup().getStorage();
-            if (!"pvc".equals(backupStorage.getType()) && !"s3".equals(backupStorage.getType())) {
-                return "Invalid spec.backup.storage.type: '" + backupStorage.getType()
-                        + "'. Must be one of: [pvc, s3]";
-            }
-            if ("s3".equals(backupStorage.getType())) {
-                var s3 = backupStorage.getS3();
+            if (BackupStorageType.S3 == spec.getBackup().getStorage().getType()) {
+                var s3 = spec.getBackup().getStorage().getS3();
                 if (s3.getBucket() == null || s3.getBucket().isBlank()) {
                     return "spec.backup.storage.s3.bucket is required when storage.type=s3";
                 }

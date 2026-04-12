@@ -1,6 +1,8 @@
 package ai.labs.eddi.operator.unit;
 
 import ai.labs.eddi.operator.crd.EddiSpec;
+import ai.labs.eddi.operator.crd.spec.DatastoreType;
+import ai.labs.eddi.operator.crd.spec.MessagingType;
 import ai.labs.eddi.operator.util.Defaults;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +16,7 @@ class ConditionTests {
     @Test
     void shouldDetectManagedMongodb() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("mongodb");
+        spec.getDatastore().setType(DatastoreType.MONGODB);
         spec.getDatastore().getManaged().setEnabled(true);
 
         assertThat(Defaults.isManagedMongodb(spec)).isTrue();
@@ -24,7 +26,7 @@ class ConditionTests {
     @Test
     void shouldDetectManagedPostgres() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("postgres");
+        spec.getDatastore().setType(DatastoreType.POSTGRES);
         spec.getDatastore().getManaged().setEnabled(true);
 
         assertThat(Defaults.isManagedPostgres(spec)).isTrue();
@@ -34,7 +36,7 @@ class ConditionTests {
     @Test
     void shouldNotDetectManagedWhenExternal() {
         var spec = new EddiSpec();
-        spec.getDatastore().setType("mongodb");
+        spec.getDatastore().setType(DatastoreType.MONGODB);
         spec.getDatastore().getManaged().setEnabled(false);
 
         assertThat(Defaults.isManagedMongodb(spec)).isFalse();
@@ -43,7 +45,7 @@ class ConditionTests {
     @Test
     void shouldDetectManagedNats() {
         var spec = new EddiSpec();
-        spec.getMessaging().setType("nats");
+        spec.getMessaging().setType(MessagingType.NATS);
         spec.getMessaging().getManaged().setEnabled(true);
 
         assertThat(Defaults.isManagedNats(spec)).isTrue();
