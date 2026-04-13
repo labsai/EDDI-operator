@@ -112,7 +112,7 @@ spec:
 
 ### Architecture
 
-The operator uses the **Dependent Resource** pattern from the Java Operator SDK. A single `EddiReconciler` declaratively manages 26 Kubernetes resources through a `@Workflow` annotation:
+The operator uses the **Dependent Resource** pattern from the Java Operator SDK. A single `EddiReconciler` declaratively manages 28 Kubernetes resources through a `@Workflow` annotation:
 
 ```
 Eddi CR
@@ -207,8 +207,8 @@ ai.labs.eddi.operator
 │   ├── exposure/            # Ingress + Route DRs (2 files)
 │   ├── extras/              # Manager, HPA, PDB, NetworkPolicy (5 files)
 │   └── monitoring/          # ServiceMonitor, PrometheusRule, Grafana (4 files)
-├── conditions/              # Activation + Ready conditions (19 files)
-└── util/                    # Labels, Hashing, Defaults (3 files)
+├── conditions/              # Activation + Ready conditions (20 files)
+└── util/                    # Labels, Hashing, Defaults, OpenShiftDetector (4 files)
 ```
 
 ---
@@ -331,23 +331,55 @@ docker build -f Dockerfile.native -t eddi-operator:6.0.0-native .
 
 ## Testing
 
+The operator has a comprehensive, three-tier test suite with **329+ tests**.
+
 ```bash
-# Unit tests (85+ tests)
+# Run all tests (unit + integration)
 mvn test
 
-# Integration tests (requires Quarkus test server)
-mvn verify -Pit
+# Run unit tests only
+mvn test -Dtest="ai.labs.eddi.operator.unit.*"
+
+# Run integration tests only (uses Quarkus mock K8s server)
+mvn test -Dtest="ai.labs.eddi.operator.integration.*"
+
+# Convenience (via Makefile)
+make test          # all tests
+make test-unit     # unit only
+make test-integration  # integration only
 ```
 
-| Test Suite | Tests | Coverage Area |
-|-----------|-------|---------------|
-| `ConditionTests` | 10 | Activation conditions, `Defaults.*` utilities |
-| `ConfigMapDRTest` | 8 | ConfigMap data generation for all datastore/messaging combos |
+### Test Architecture
+
+| Tier | Tests | Runner | What It Validates |
+|------|-------|--------|-------------------|
+| **Unit** | ~310 | JUnit 5 + AssertJ | DR `desired()` output, activation conditions, spec validation, utility functions |
+| **Integration** | ~10 | `@QuarkusTest` + mock K8s server | Full reconciliation workflows, status computation, resource creation |
+| **E2E** _(scaffold)_ | 2 | Testcontainers K3s | CRD install, real-cluster lifecycle (Linux-only, `@Disabled` until CI image pipeline) |
+
+### Unit Test Coverage
+
+| Test Suite | Tests | Coverage |
+|-----------|-------|----------|
+| `DatastoreDRTest` | 22 | Mongo/Postgres StatefulSets, Services — image, ports, PVC, probes, security |
+| `MessagingDRTest` | 10 | NATS StatefulSet + Service — JetStream args, dual ports, health probes |
+| `ExposureDRTest` | 15 | Ingress + Route — TLS defaults, host routing, backends, ingressClassName |
+| `AuthDRTest` | 12 | Keycloak Deployment (dev/prod mode), Service, credential generation |
+| `MonitoringDRTest` | 13 | ServiceMonitor, GrafanaDashboard, PrometheusRule (PromQL correctness) |
+| `ManagerDRTest` | 9 | Manager Deployment (API URL wiring), Service |
+| `CoreDRTest` | 24 | ServiceAccount, EddiService, VaultSecret, HPA, PDB, NetworkPolicy, BackupPvc |
+| `ActivationConditionTests` | 42 | All 20 activation conditions (positive + negative) |
+| `ReconcilerValidationTest` | 17 | Spec validation edge cases (replicas, cron, S3 buckets) |
+| `ConfigMapDRTest` | 8 | ConfigMap data for all datastore/messaging combinations |
 | `EddiDeploymentDRTest` | 11 | Deployment DR helpers, image resolution |
+| `ConditionTests` | 10 | Activation conditions, `Defaults.*` utilities |
+| `EnterpriseHardeningTests` | 23 | Scheduling, labels, PVC retention, backup validation |
+| `ValidationAndSecurityTests` | 32 | Spec validation, image resolution, shell sanitization |
+| `BackupCronJobDRTest` | 10 | Backup command generation, retention, image resolution |
+| `ShellSanitizationTest` | 16 | Input sanitization for shell commands |
+| `SecretResilienceTest` | 21 | Secret lookup failure handling |
 | `UtilTests` | 7 | Labels, Hashing |
-| `ValidationAndSecurityTests` | 26 | Spec validation, image resolution, Keycloak secret gen, conditions |
-| `EnterpriseHardeningTests` | 23 | Scheduling, labels, PVC retention, backup validation/conditions |
-| `EddiReconcilerIT` | 10 | Full reconciler integration (mock K8s server) |
+| `ExtrasDRTest` | 13 | Default values for CRD spec fields |
 
 ## Documentation
 

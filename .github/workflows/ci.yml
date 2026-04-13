@@ -32,7 +32,15 @@ jobs:
         run: ./mvnw test
 
       - name: Run integration tests
-        run: ./mvnw verify -DskipUnitTests
+        run: ./mvnw test -Dtest="ai.labs.eddi.operator.integration.*"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: target/surefire-reports/
+          retention-days: 14
 
       - name: Package (JVM)
         run: ./mvnw package -DskipTests

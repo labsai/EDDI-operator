@@ -30,12 +30,12 @@ The operator follows the **Dependent Resource** pattern from JOSDK:
 ## Do NOT
 
 - Use Java 25 features (records with named patterns, etc.) — stick to Java 21
-- Add dependencies not managed by the Quarkus BOM without explicit approval
+- Add dependencies not managed by the Quarkus BOM without explicit approval (exception: `testcontainers-k3s` is approved for E2E testing)
 - Change the API group or version without updating the plan document
 - Deploy Keycloak realm configuration — managed Keycloak is server-only
 
 ## Testing Tiers
 
-1. **Unit tests** (`src/test/java/.../unit/`) — test `desired()` output of DRs, condition logic
-2. **Integration tests** (`src/test/java/.../integration/`) — use `@QuarkusTest` + `MockKubernetesServer`
-3. **E2E tests** (`src/test/java/.../e2e/`) — use Testcontainers + K3s (future)
+1. **Unit tests** (`src/test/java/.../unit/`) — test `desired()` output of DRs via reflection (`TestSupport.callDesired()`), condition logic, spec validation. ~310 tests.
+2. **Integration tests** (`src/test/java/.../integration/`) — use `@QuarkusTest` + `MockKubernetesServer`. ~10 tests.
+3. **E2E tests** (`src/test/java/.../e2e/`) — Testcontainers + K3s. Scaffolded, `@Disabled` until CI image pipeline exists. Linux-only.
